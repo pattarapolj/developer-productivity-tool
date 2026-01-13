@@ -16,7 +16,8 @@ import type {
   TimeByEntryType,
   DeepWorkSession,
   VelocityWeekData,
-  TaskEfficiencyMetrics
+  TaskEfficiencyMetrics,
+  HistoryEntry
 } from "./types"
 
 interface ToolingTrackerState {
@@ -94,6 +95,8 @@ interface ToolingTrackerState {
   // History actions
   addHistory: (history: Omit<TaskHistory, "id" | "changedAt">) => void
   getHistoryForTask: (taskId: string) => TaskHistory[]
+  trackFieldChange: (taskId: string, field: string, oldValue: unknown, newValue: unknown) => void
+  getFormattedHistory: (taskId: string) => HistoryEntry[]
   
   // Task dependencies
   addBlocker: (taskId: string, blockedByTaskId: string) => void
@@ -1027,6 +1030,99 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         return get().history.filter((h) => h.taskId === taskId).sort((a, b) => 
           new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime()
         )
+      },
+
+      trackFieldChange: (taskId, field, oldValue, newValue) => {
+        // Only track if values are different
+        if (oldValue === newValue) return
+        
+        const oldValueStr = oldValue === null || oldValue === undefined ? '' : String(oldValue)
+        const newValueStr = newValue === null || newValue === undefined ? '' : String(newValue)
+        
+        if (oldValueStr === newValueStr) return
+        
+        get().addHistory({
+          taskId,
+          field,
+          oldValue: oldValueStr,
+          newValue: newValueStr,
+        })
+      },
+
+      getFormattedHistory: (taskId) => {
+        const history = get().getHistoryForTask(taskId)
+        const { tasks, projects } = get()
+        
+        const formatFieldLabel = (field: string): string => {
+          const labels: Record<string, string> = {
+            title: 'Title',
+            description: 'Description',
+            status: 'Status',
+            priority: 'Priority',
+            projectId: 'Project',
+            dueDate: 'Due Date',
+            subcategory: 'Subcategory',
+            jiraKey: 'Jira Key',
+            storyPoints: 'Story Points',
+          }
+          return labels[field] || field.charAt(0).toUpperCase() + field.slice(1)
+        }
+        
+        const formatStatusValue = (value: string): string => {
+          const statusLabels: Record<string, string> = {
+            backlog: 'Backlog',
+            todo: 'To Do',
+            'in-progress': 'In Progress',
+            done: 'Done',
+          }
+          return statusLabels[value] || value
+        }
+        
+        const formatPriorityValue = (value: string): string => {
+          return value.charAt(0).toUpperCase() + value.slice(1)
+        }
+        
+        const formatProjectValue = (projectId: string): string => {
+          const project = projects.find(p => p.id === projectId)
+          return project?.name || projectId
+        }
+        
+        const formatValue = (field: string, value: string): string => {
+          if (!value) return '(empty)'
+          
+          switch (field) {
+            case 'status':
+              return formatStatusValue(value)
+            case 'priority':
+              return formatPriorityValue(value)
+            case 'projectId':
+              return formatProjectValue(value)
+            case 'dueDate':
+              return value ? new Date(value).toLocaleDateString() : '(empty)'
+            default:
+              return value || '(empty)'
+          }
+        }
+        
+        return history.map((h): HistoryEntry => {
+          let changeType: HistoryEntry['changeType'] = 'updated'
+          if (h.field === 'status') {
+            changeType = 'status_changed'
+          }
+          
+          return {
+            id: h.id,
+            taskId: h.taskId,
+            field: h.field,
+            fieldLabel: formatFieldLabel(h.field),
+            oldValue: h.oldValue,
+            newValue: h.newValue,
+            oldValueFormatted: formatValue(h.field, h.oldValue),
+            newValueFormatted: formatValue(h.field, h.newValue),
+            changedAt: h.changedAt,
+            changeType,
+          }
+        })
       },
 
       // Task dependencies

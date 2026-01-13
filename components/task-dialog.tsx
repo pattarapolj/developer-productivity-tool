@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TaskComments } from "@/components/task-comments"
+import { TaskHistory } from "@/components/task-history"
 import type { Task, TaskStatus, Priority } from "@/lib/types"
 
 interface TaskDialogProps {
@@ -90,120 +93,252 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus = "todo" }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{task ? "Edit Task" : "Create Task"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Title</label>
-            <Input placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
+        
+        {task ? (
+          <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="comments">Comments</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="details" className="flex-1 overflow-y-auto px-1">
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Title</label>
+                  <Input placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
+                </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Description</label>
-            <Textarea
-              placeholder="Task description (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="max-h-32 overflow-y-auto resize-none field-sizing-fixed"
-            />
-          </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <Textarea
+                    placeholder="Task description (optional)"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    className="max-h-32 overflow-y-auto resize-none field-sizing-fixed"
+                  />
+                </div>
 
-          <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Project</label>
+                    <Select value={projectId} onValueChange={setProjectId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Status</label>
+                    <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todo">To Do</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="done">Done</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Priority</label>
+                    <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Due Date</label>
+                    <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Jira Key</label>
+                    <Input placeholder="e.g. ENG-123" value={jiraKey} onChange={(e) => setJiraKey(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Story Points</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      placeholder="e.g. 3"
+                      value={storyPoints}
+                      onChange={(e) => setStoryPoints(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Subcategory</label>
+                  <div className="space-y-1">
+                    <Input
+                      list="task-subcategory-options"
+                      placeholder="Optional subcategory (e.g. Design, Backend)"
+                      value={subcategory}
+                      onChange={(e) => setSubcategory(e.target.value)}
+                    />
+                    <datalist id="task-subcategory-options">
+                      {(projects.find((p) => p.id === projectId)?.subcategories ?? []).map((option) => (
+                        <option key={option} value={option} />
+                      ))}
+                    </datalist>
+                    <p className="text-xs text-muted-foreground">Pick an existing label or type a new one per project.</p>
+                  </div>
+                </div>
+
+                <Button onClick={handleSubmit} className="w-full">
+                  Update Task
+                </Button>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="comments" className="flex-1 overflow-y-auto px-1 pt-4">
+              <TaskComments taskId={task.id} />
+            </TabsContent>
+            
+            <TabsContent value="history" className="flex-1 overflow-y-auto px-1 pt-4">
+              <TaskHistory taskId={task.id} />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="space-y-4 pt-4 overflow-y-auto">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Project</label>
-              <Select value={projectId} onValueChange={setProjectId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
+              <label className="text-sm font-medium">Title</label>
+              <Input placeholder="Task title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                placeholder="Task description (optional)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="max-h-32 overflow-y-auto resize-none field-sizing-fixed"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Project</label>
+                <Select value={projectId} onValueChange={setProjectId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todo">To Do</SelectItem>
+                    <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="done">Done</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Priority</label>
+                <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Due Date</label>
+                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Jira Key</label>
+                <Input placeholder="e.g. ENG-123" value={jiraKey} onChange={(e) => setJiraKey(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Story Points</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="e.g. 3"
+                  value={storyPoints}
+                  onChange={(e) => setStoryPoints(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Subcategory</label>
+              <div className="space-y-1">
+                <Input
+                  list="task-subcategory-options"
+                  placeholder="Optional subcategory (e.g. Design, Backend)"
+                  value={subcategory}
+                  onChange={(e) => setSubcategory(e.target.value)}
+                />
+                <datalist id="task-subcategory-options">
+                  {(projects.find((p) => p.id === projectId)?.subcategories ?? []).map((option) => (
+                    <option key={option} value={option} />
                   ))}
-                </SelectContent>
-              </Select>
+                </datalist>
+                <p className="text-xs text-muted-foreground">Pick an existing label or type a new one per project.</p>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Button onClick={handleSubmit} className="w-full">
+              Create Task
+            </Button>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Priority</label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Due Date</label>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Jira Key</label>
-              <Input placeholder="e.g. ENG-123" value={jiraKey} onChange={(e) => setJiraKey(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Story Points</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.5"
-                placeholder="e.g. 3"
-                value={storyPoints}
-                onChange={(e) => setStoryPoints(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Subcategory</label>
-            <div className="space-y-1">
-              <Input
-                list="task-subcategory-options"
-                placeholder="Optional subcategory (e.g. Design, Backend)"
-                value={subcategory}
-                onChange={(e) => setSubcategory(e.target.value)}
-              />
-              <datalist id="task-subcategory-options">
-                {(projects.find((p) => p.id === projectId)?.subcategories ?? []).map((option) => (
-                  <option key={option} value={option} />
-                ))}
-              </datalist>
-              <p className="text-xs text-muted-foreground">Pick an existing label or type a new one per project.</p>
-            </div>
-          </div>
-
-          <Button onClick={handleSubmit} className="w-full">
-            {task ? "Update Task" : "Create Task"}
-          </Button>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   )
