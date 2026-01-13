@@ -49,6 +49,33 @@ export interface FilterPreset {
   createdAt: Date
 }
 
+export type ComparisonPeriod = "week-over-week" | "month-over-month" | "quarter-over-quarter"
+
+export interface ComparisonData {
+  current: {
+    tasksCompleted: number
+    tasksCreated: number
+    totalTime: number
+    avgCompletionTime: number
+  }
+  previous: {
+    tasksCompleted: number
+    tasksCreated: number
+    totalTime: number
+    avgCompletionTime: number
+  }
+  delta: {
+    tasksCompleted: number
+    tasksCompletedPercent: number
+    tasksCreated: number
+    tasksCreatedPercent: number
+    totalTime: number
+    totalTimePercent: number
+    avgCompletionTime: number
+    avgCompletionTimePercent: number
+  }
+}
+
 export type TimeEntryType = "development" | "meeting" | "review" | "research" | "debugging" | "other"
 
 export interface TimeEntry {

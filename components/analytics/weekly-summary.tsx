@@ -4,6 +4,8 @@ import { useMemo, useState } from "react"
 import { useToolingTrackerStore } from "@/lib/store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import {
   BarChart,
   Bar,
@@ -17,7 +19,8 @@ import {
 } from "recharts"
 import { Calendar, Clock, TrendingUp, Target } from "lucide-react"
 import { formatMinutes } from "@/lib/utils"
-import type { TimeEntryType } from "@/lib/types"
+import { ComparisonView } from "./comparison-view"
+import type { TimeEntryType, ComparisonPeriod } from "@/lib/types"
 
 type WeekRange = "this-week" | "last-week"
 
@@ -40,8 +43,10 @@ const TIME_ENTRY_TYPE_LABELS: Record<TimeEntryType, string> = {
 }
 
 export function WeeklySummary() {
-  const { tasks, timeEntries, getTasksCompletedInRange, getTimeBreakdownByType, getProductivityTrend } = useToolingTrackerStore()
+  const { tasks, timeEntries, getTasksCompletedInRange, getTimeBreakdownByType, getProductivityTrend, getComparisonData } = useToolingTrackerStore()
   const [weekRange, setWeekRange] = useState<WeekRange>("this-week")
+  const [showComparison, setShowComparison] = useState(false)
+  const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>('week-over-week')
 
   const weekData = useMemo(() => {
     const now = new Date()
@@ -125,6 +130,11 @@ export function WeeklySummary() {
     return null
   }
 
+  const comparisonData = useMemo(() => {
+    if (!showComparison) return null
+    return getComparisonData(comparisonPeriod)
+  }, [showComparison, comparisonPeriod, getComparisonData])
+
   return (
     <Card className="col-span-full">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
@@ -156,7 +166,48 @@ export function WeeklySummary() {
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-6">
+        {/* Comparison Controls */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-4 border-b">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="weekly-comparison"
+              checked={showComparison}
+              onCheckedChange={setShowComparison}
+            />
+            <Label htmlFor="weekly-comparison">Show Period Comparison</Label>
+          </div>
+          {showComparison && (
+            <div className="flex gap-2">
+              <Button
+                variant={comparisonPeriod === 'week-over-week' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setComparisonPeriod('week-over-week')}
+              >
+                Week-over-Week
+              </Button>
+              <Button
+                variant={comparisonPeriod === 'month-over-month' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setComparisonPeriod('month-over-month')}
+              >
+                Month-over-Month
+              </Button>
+              <Button
+                variant={comparisonPeriod === 'quarter-over-quarter' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setComparisonPeriod('quarter-over-quarter')}
+              >
+                Quarter-over-Quarter
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Comparison View */}
+        {showComparison && comparisonData && (
+          <ComparisonView data={comparisonData} period={comparisonPeriod} />
+        )}
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card>
