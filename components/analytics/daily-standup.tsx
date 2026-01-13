@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import Link from "next/link"
 import { useToolingTrackerStore } from "@/lib/store"
 import { formatMinutes, getProjectColorClass } from "@/lib/utils"
@@ -10,8 +10,22 @@ import { Clock, CheckCircle2, AlertCircle } from "lucide-react"
 
 export function DailyStandup() {
   const { tasks, projects, getTimeForTask, getTasksCompletedInRange, getBlockedTasks } = useToolingTrackerStore()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const standupData = useMemo(() => {
+    if (!mounted) {
+      // Return empty data during SSR to avoid hydration mismatch
+      return {
+        yesterday: [],
+        today: [],
+        blockers: [],
+      }
+    }
+
     const now = new Date()
     
     // Calculate yesterday's date range (00:00:00 to 23:59:59.999)
@@ -34,7 +48,7 @@ export function DailyStandup() {
       today: todayTasks,
       blockers: blockedTasks,
     }
-  }, [tasks, getTasksCompletedInRange, getBlockedTasks])
+  }, [mounted, tasks, getTasksCompletedInRange, getBlockedTasks])
 
   const getProjectForTask = (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId)
