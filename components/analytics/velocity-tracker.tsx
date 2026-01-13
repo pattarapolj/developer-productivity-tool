@@ -9,6 +9,8 @@ import { useToolingTrackerStore } from '@/lib/store'
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { TrendingUp, TrendingDown, Minus, Target, Clock, Activity } from 'lucide-react'
 import { ComparisonView } from './comparison-view'
+import { TrendIndicator } from './trend-indicator'
+import { calculateTrendLine, getTrendLineCoordinates } from '@/lib/analytics-utils'
 import type { VelocityWeekData, ComparisonPeriod } from '@/lib/types'
 
 type TimeRange = '4W' | '8W' | '12W'
@@ -16,6 +18,7 @@ type TimeRange = '4W' | '8W' | '12W'
 export function VelocityTracker() {
   const [timeRange, setTimeRange] = useState<TimeRange>('8W')
   const [showComparison, setShowComparison] = useState(false)
+  const [showTrendLine, setShowTrendLine] = useState(true)
   const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>('week-over-week')
   const getVelocityData = useToolingTrackerStore((state) => state.getVelocityData)
   const getAverageCycleTime = useToolingTrackerStore((state) => state.getAverageCycleTime)
@@ -95,6 +98,26 @@ export function VelocityTracker() {
     if (!showComparison) return null
     return getComparisonData(comparisonPeriod)
   }, [showComparison, comparisonPeriod, getComparisonData])
+
+  // Calculate trend for velocity data
+  const velocityTrend = useMemo(() => {
+    if (velocityData.length === 0) return null
+    const completedValues = velocityData.map(w => w.completed)
+    return calculateTrendLine(completedValues)
+  }, [velocityData])
+
+  // Get trend line coordinates for chart overlay
+  const velocityTrendLineData = useMemo(() => {
+    if (!showTrendLine || velocityData.length === 0) return []
+    
+    const completedValues = velocityData.map(w => w.completed)
+    const trendCoords = getTrendLineCoordinates(completedValues)
+    
+    return velocityData.map((week, index) => ({
+      ...week,
+      trend: trendCoords[index]?.y || null,
+    }))
+  }, [velocityData, showTrendLine])
 
   return (
     <div className="space-y-6">
@@ -177,6 +200,18 @@ export function VelocityTracker() {
         <ComparisonView data={comparisonData} period={comparisonPeriod} />
       )}
 
+      {/* Trend Line Toggle */}
+      <div className="flex items-center gap-3 pb-4 border-b">
+        <Label htmlFor="trend-line-toggle" className="text-sm font-medium">
+          Show Trend Line
+        </Label>
+        <Switch
+          id="trend-line-toggle"
+          checked={showTrendLine}
+          onCheckedChange={setShowTrendLine}
+        />
+      </div>
+
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -207,11 +242,17 @@ export function VelocityTracker() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
-              {getTrendIcon()}
-              <span className={`text-2xl font-bold ${getTrendColor()}`}>
-                {metrics.trend === 'stable' ? 'Stable' : metrics.trend === 'up' ? 'Increasing' : 'Decreasing'}
-              </span>
+            <div className="flex items-center gap-2 mb-2">
+              {velocityTrend && (
+                <TrendIndicator 
+                  direction={velocityTrend.direction} 
+                  percentage={velocityTrend.percentage}
+                  size="lg"
+                />
+              )}
+              {!velocityTrend && (
+                <span className="text-2xl font-bold text-muted-foreground">No Data</span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {metrics.recentVelocity} vs {metrics.previousVelocity} tasks/week
@@ -231,7 +272,7 @@ export function VelocityTracker() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={velocityData}>
+                <LineChart data={showTrendLine ? velocityTrendLineData : velocityData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis 
                     dataKey="week" 
@@ -250,6 +291,12 @@ export function VelocityTracker() {
                       borderRadius: '6px',
                     }}
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    formatter={(value: number, name: string) => {
+                      if (name === 'Trend Line') {
+                        return [value?.toFixed(1) || 'N/A', name]
+                      }
+                      return [value, name]
+                    }}
                   />
                   <Legend />
                   <Line 
@@ -261,6 +308,18 @@ export function VelocityTracker() {
                     dot={{ fill: 'hsl(var(--primary))', r: 4 }}
                     activeDot={{ r: 6 }}
                   />
+                  {showTrendLine && velocityTrend && (
+                    <Line 
+                      type="monotone" 
+                      dataKey="trend" 
+                      stroke="hsl(var(--muted-foreground))" 
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name="Trend Line"
+                      dot={false}
+                      activeDot={false}
+                    />
+                  )}
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>

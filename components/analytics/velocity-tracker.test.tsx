@@ -175,11 +175,11 @@ describe('VelocityTracker Component', () => {
     
     render(<VelocityTracker />)
     
-    // Should show trend (either Increasing, Decreasing, or Stable)
-    expect(
-      screen.getByText('Increasing') || 
-      screen.getByText('Decreasing') || 
-      screen.getByText('Stable')
-    ).toBeInTheDocument()
+    // Should show trend card
+    expect(screen.getByText('Velocity Trend')).toBeInTheDocument()
+    
+    // Should display comparison of recent vs previous velocity
+    const metricsText = screen.getByText(/vs.*tasks\/week/i)
+    expect(metricsText).toBeInTheDocument()
   })
 })
