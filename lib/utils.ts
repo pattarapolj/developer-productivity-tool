@@ -39,3 +39,13 @@ export function getPriorityColorClass(priority: string): string {
   }
   return colors[priority] || colors.medium
 }
+
+export function getStatusColorClass(status: string): string {
+  const colors: Record<string, string> = {
+    backlog: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
+    todo: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    "in-progress": "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    done: "bg-green-500/10 text-green-600 dark:text-green-400",
+  }
+  return colors[status] || colors.todo
+}
