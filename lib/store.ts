@@ -14,7 +14,9 @@ import type {
   TaskHistory,
   TimeEntryType,
   TimeByEntryType,
-  DeepWorkSession
+  DeepWorkSession,
+  VelocityWeekData,
+  TaskEfficiencyMetrics
 } from "./types"
 
 interface ToolingTrackerState {
@@ -70,6 +72,9 @@ interface ToolingTrackerState {
   getTasksCompletedInRange: (startDate: Date, endDate: Date) => Task[]
   getTimeBreakdownByType: (startDate: Date, endDate: Date) => Record<TimeEntryType, number>
   getProductivityTrend: (startDate: Date, endDate: Date) => { day: string; minutes: number }[]
+  getVelocityData: (weeksBack: number) => VelocityWeekData[]
+  getAverageCycleTime: (projectId?: string) => number
+  getTaskEfficiencyMetrics: () => TaskEfficiencyMetrics
   
   // Activity actions
   addActivity: (activity: Omit<Activity, "id" | "createdAt">) => void
@@ -737,6 +742,178 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         }
         
         return trend
+      },
+
+      getVelocityData: (weeksBack) => {
+        const { tasks } = get()
+        const velocityData: VelocityWeekData[] = []
+        
+        // Generate data for the requested number of weeks
+        for (let weekOffset = 0; weekOffset < weeksBack; weekOffset++) {
+          const weekEnd = new Date()
+          weekEnd.setDate(weekEnd.getDate() - (weekOffset * 7))
+          weekEnd.setHours(23, 59, 59, 999)
+          
+          const weekStart = new Date(weekEnd)
+          weekStart.setDate(weekStart.getDate() - 6)
+          weekStart.setHours(0, 0, 0, 0)
+          
+          // Get tasks completed in this week
+          const completedInWeek = tasks.filter((task) => {
+            if (!task.completedAt) return false
+            const completedDate = new Date(task.completedAt)
+            return completedDate >= weekStart && completedDate <= weekEnd
+          })
+          
+          // Calculate average cycle time for this week
+          let avgCycleTime = 0
+          if (completedInWeek.length > 0) {
+            const totalCycleDays = completedInWeek.reduce((sum, task) => {
+              const created = new Date(task.createdAt)
+              const completed = new Date(task.completedAt!)
+              const cycleDays = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
+              return sum + cycleDays
+            }, 0)
+            avgCycleTime = totalCycleDays / completedInWeek.length
+          }
+          
+          // Format week label (e.g., "Jan 1-7")
+          const weekLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}-${weekEnd.getDate()}`
+          
+          velocityData.unshift({
+            week: weekLabel,
+            weekStart,
+            weekEnd,
+            completed: completedInWeek.length,
+            avgCycleTime,
+          })
+        }
+        
+        return velocityData
+      },
+
+      getAverageCycleTime: (projectId?) => {
+        const { tasks } = get()
+        
+        // Filter completed tasks
+        let completedTasks = tasks.filter((task) => task.completedAt !== null)
+        
+        // Further filter by project if provided
+        if (projectId) {
+          completedTasks = completedTasks.filter((task) => task.projectId === projectId)
+        }
+        
+        if (completedTasks.length === 0) return 0
+        
+        // Calculate average cycle time in days
+        const totalCycleDays = completedTasks.reduce((sum, task) => {
+          const created = new Date(task.createdAt)
+          const completed = new Date(task.completedAt!)
+          const cycleDays = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
+          return sum + cycleDays
+        }, 0)
+        
+        return totalCycleDays / completedTasks.length
+      },
+
+      getTaskEfficiencyMetrics: () => {
+        const { tasks, timeEntries, projects } = get()
+        
+        // Filter completed tasks only
+        const completedTasks = tasks.filter((task) => task.completedAt !== null)
+        
+        if (completedTasks.length === 0) {
+          return {
+            byPriority: [],
+            byProject: [],
+            overallAvgCycleTime: 0,
+            overallAvgTimeSpent: 0,
+          }
+        }
+        
+        // Calculate metrics by priority
+        const priorityGroups = new Map<string, { tasks: Task[]; totalCycleTime: number; totalTimeSpent: number }>()
+        
+        completedTasks.forEach((task) => {
+          const priority = task.priority
+          if (!priorityGroups.has(priority)) {
+            priorityGroups.set(priority, { tasks: [], totalCycleTime: 0, totalTimeSpent: 0 })
+          }
+          
+          const group = priorityGroups.get(priority)!
+          group.tasks.push(task)
+          
+          // Calculate cycle time
+          const created = new Date(task.createdAt)
+          const completed = new Date(task.completedAt!)
+          const cycleDays = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
+          group.totalCycleTime += cycleDays
+          
+          // Calculate time spent
+          const taskTimeEntries = timeEntries.filter((entry) => entry.taskId === task.id)
+          const timeSpentMinutes = taskTimeEntries.reduce((sum, entry) => sum + entry.hours * 60 + entry.minutes, 0)
+          group.totalTimeSpent += timeSpentMinutes
+        })
+        
+        const byPriority = Array.from(priorityGroups.entries()).map(([priority, group]) => ({
+          category: priority,
+          avgCycleTimeDays: group.totalCycleTime / group.tasks.length,
+          avgTimeSpentMinutes: group.totalTimeSpent / group.tasks.length,
+          taskCount: group.tasks.length,
+        }))
+        
+        // Calculate metrics by project
+        const projectGroups = new Map<string, { tasks: Task[]; totalCycleTime: number; totalTimeSpent: number }>()
+        
+        completedTasks.forEach((task) => {
+          const project = projects.find((p) => p.id === task.projectId)
+          const projectName = project?.name || 'Unknown'
+          
+          if (!projectGroups.has(projectName)) {
+            projectGroups.set(projectName, { tasks: [], totalCycleTime: 0, totalTimeSpent: 0 })
+          }
+          
+          const group = projectGroups.get(projectName)!
+          group.tasks.push(task)
+          
+          // Calculate cycle time
+          const created = new Date(task.createdAt)
+          const completed = new Date(task.completedAt!)
+          const cycleDays = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
+          group.totalCycleTime += cycleDays
+          
+          // Calculate time spent
+          const taskTimeEntries = timeEntries.filter((entry) => entry.taskId === task.id)
+          const timeSpentMinutes = taskTimeEntries.reduce((sum, entry) => sum + entry.hours * 60 + entry.minutes, 0)
+          group.totalTimeSpent += timeSpentMinutes
+        })
+        
+        const byProject = Array.from(projectGroups.entries()).map(([projectName, group]) => ({
+          category: projectName,
+          avgCycleTimeDays: group.totalCycleTime / group.tasks.length,
+          avgTimeSpentMinutes: group.totalTimeSpent / group.tasks.length,
+          taskCount: group.tasks.length,
+        }))
+        
+        // Calculate overall averages
+        const totalCycleDays = completedTasks.reduce((sum, task) => {
+          const created = new Date(task.createdAt)
+          const completed = new Date(task.completedAt!)
+          const cycleDays = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
+          return sum + cycleDays
+        }, 0)
+        
+        const totalTimeSpentMinutes = completedTasks.reduce((sum, task) => {
+          const taskTimeEntries = timeEntries.filter((entry) => entry.taskId === task.id)
+          return sum + taskTimeEntries.reduce((entrySum, entry) => entrySum + entry.hours * 60 + entry.minutes, 0)
+        }, 0)
+        
+        return {
+          byPriority,
+          byProject,
+          overallAvgCycleTime: totalCycleDays / completedTasks.length,
+          overallAvgTimeSpent: totalTimeSpentMinutes / completedTasks.length,
+        }
       },
 
       // Activity actions
