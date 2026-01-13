@@ -36,7 +36,9 @@ export interface BoardFilters {
   search: string
   projectId: string | null
   priority: Priority | "all"
-  dateRange: "all" | "today" | "week" | "month" | "quarter"
+  dateRange: "all" | "today" | "week" | "month" | "quarter" | "custom"
+  customStart: Date | null
+  customEnd: Date | null
   showArchived: boolean
 }
 
