@@ -125,3 +125,9 @@ export interface FocusTimeMetrics {
   developmentMinutes: number
   deepWorkSessions: DeepWorkSession[]
 }
+
+export interface StandupData {
+  yesterday: Task[]
+  today: Task[]
+  blockers: Task[]
+}
