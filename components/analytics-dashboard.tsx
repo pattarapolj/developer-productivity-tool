@@ -9,6 +9,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, 
 import { FocusTime } from "@/components/analytics/focus-time"
 import { DailyStandup } from "@/components/analytics/daily-standup"
 import { WeeklySummary } from "@/components/analytics/weekly-summary"
+import { VelocityTracker } from "@/components/analytics/velocity-tracker"
+import { TaskEfficiency } from "@/components/analytics/task-efficiency"
 
 const CHART_COLORS = [
   "oklch(0.65 0.18 250)", // blue
@@ -259,6 +261,12 @@ export function AnalyticsDashboard() {
 
       {/* Weekly Summary - Overview of the week */}
       <WeeklySummary />
+
+      {/* Velocity Tracker - Sprint planning metrics */}
+      <VelocityTracker />
+
+      {/* Task Efficiency - Completion time analysis */}
+      <TaskEfficiency />
 
       {/* Focus Time Analysis Section */}
       <FocusTime />

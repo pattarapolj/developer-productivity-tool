@@ -808,5 +808,482 @@ describe('Focus Time Analysis - Store Helpers', () => {
       expect(result[2].day).toBeTruthy()
     })
   })
+
+  describe('getVelocityData', () => {
+    it('should group completed tasks by week correctly', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      // Add tasks completed in different weeks
+      store.addTask({
+        title: 'Task 1',
+        description: 'Test',
+        status: 'done',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const task1Id = useToolingTrackerStore.getState().tasks[0].id
+      
+      store.addTask({
+        title: 'Task 2',
+        description: 'Test',
+        status: 'done',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const task2Id = useToolingTrackerStore.getState().tasks[1].id
+      
+      // Manually set completed dates (2 weeks ago and 1 week ago)
+      useToolingTrackerStore.setState((state) => ({
+        tasks: state.tasks.map((t) => {
+          if (t.id === task1Id) {
+            const twoWeeksAgo = new Date()
+            twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+            return { ...t, completedAt: twoWeeksAgo, createdAt: new Date(twoWeeksAgo.getTime() - 86400000 * 2) }
+          }
+          if (t.id === task2Id) {
+            const oneWeekAgo = new Date()
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+            return { ...t, completedAt: oneWeekAgo, createdAt: new Date(oneWeekAgo.getTime() - 86400000 * 1) }
+          }
+          return t
+        }),
+      }))
+      
+      const result = store.getVelocityData(3)
+      
+      expect(result).toHaveLength(3)
+      // Should have at least one week with completed tasks
+      const weeksWithTasks = result.filter(w => w.completed > 0)
+      expect(weeksWithTasks.length).toBeGreaterThan(0)
+    })
+
+    it('should calculate average cycle time per week', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      store.addTask({
+        title: 'Task',
+        description: 'Test',
+        status: 'done',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+      
+      // Set created 3 days ago, completed today
+      const threeDaysAgo = new Date()
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+      
+      useToolingTrackerStore.setState((state) => ({
+        tasks: state.tasks.map((t) => 
+          t.id === taskId ? { ...t, completedAt: new Date(), createdAt: threeDaysAgo } : t
+        ),
+      }))
+      
+      const result = store.getVelocityData(1)
+      
+      const currentWeek = result.find(w => w.completed > 0)
+      expect(currentWeek).toBeDefined()
+      expect(currentWeek!.avgCycleTime).toBeGreaterThan(2) // Should be around 3 days
+      expect(currentWeek!.avgCycleTime).toBeLessThan(4)
+    })
+
+    it('should return correct number of weeks', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      const result = store.getVelocityData(4)
+      
+      expect(result).toHaveLength(4)
+    })
+
+    it('should include weeks with no completed tasks as 0', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      const result = store.getVelocityData(2)
+      
+      expect(result).toHaveLength(2)
+      expect(result.every(w => w.completed === 0)).toBe(true)
+    })
+  })
+
+  describe('getAverageCycleTime', () => {
+    it('should calculate average cycle time across all completed tasks', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      // Add two tasks with different cycle times
+      store.addTask({
+        title: 'Task 1',
+        description: 'Test',
+        status: 'done',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      store.addTask({
+        title: 'Task 2',
+        description: 'Test',
+        status: 'done',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      // Set cycle times: Task 1 = 2 days, Task 2 = 4 days
+      const now = new Date()
+      const twoDaysAgo = new Date(now.getTime() - 86400000 * 2)
+      const fourDaysAgo = new Date(now.getTime() - 86400000 * 4)
+      
+      useToolingTrackerStore.setState((state) => ({
+        tasks: state.tasks.map((t, index) => {
+          if (index === 0) {
+            return { ...t, completedAt: now, createdAt: twoDaysAgo }
+          }
+          if (index === 1) {
+            return { ...t, completedAt: now, createdAt: fourDaysAgo }
+          }
+          return t
+        }),
+      }))
+      
+      const result = store.getAverageCycleTime()
+      
+      // Average should be (2 + 4) / 2 = 3 days
+      expect(result).toBeGreaterThan(2.9)
+      expect(result).toBeLessThan(3.1)
+    })
+
+    it('should filter by project when projectId provided', () => {
+      const store = useToolingTrackerStore.getState()
+      const project1Id = store.projects[0].id
+      
+      // Add second project
+      store.addProject('Project 2', 'green')
+      const project2Id = useToolingTrackerStore.getState().projects[1].id
+      
+      // Add tasks to both projects
+      store.addTask({
+        title: 'Task P1',
+        description: 'Test',
+        status: 'done',
+        priority: 'medium',
+        projectId: project1Id,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      store.addTask({
+        title: 'Task P2',
+        description: 'Test',
+        status: 'done',
+        priority: 'medium',
+        projectId: project2Id,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      // Set different cycle times
+      const now = new Date()
+      const oneDayAgo = new Date(now.getTime() - 86400000 * 1)
+      const fiveDaysAgo = new Date(now.getTime() - 86400000 * 5)
+      
+      useToolingTrackerStore.setState((state) => ({
+        tasks: state.tasks.map((t) => {
+          if (t.projectId === project1Id) {
+            return { ...t, completedAt: now, createdAt: oneDayAgo }
+          }
+          if (t.projectId === project2Id) {
+            return { ...t, completedAt: now, createdAt: fiveDaysAgo }
+          }
+          return t
+        }),
+      }))
+      
+      const project1CycleTime = store.getAverageCycleTime(project1Id)
+      const project2CycleTime = store.getAverageCycleTime(project2Id)
+      
+      expect(project1CycleTime).toBeGreaterThan(0.9)
+      expect(project1CycleTime).toBeLessThan(1.1)
+      expect(project2CycleTime).toBeGreaterThan(4.9)
+      expect(project2CycleTime).toBeLessThan(5.1)
+    })
+
+    it('should return 0 when no completed tasks exist', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      const result = store.getAverageCycleTime()
+      
+      expect(result).toBe(0)
+    })
+  })
+
+  describe('getTaskEfficiencyMetrics', () => {
+    it('should calculate average cycle time by priority', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      // Add high priority task (2 day cycle)
+      store.addTask({
+        title: 'High Priority Task',
+        description: 'Test',
+        status: 'done',
+        priority: 'high',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      // Add low priority task (5 day cycle)
+      store.addTask({
+        title: 'Low Priority Task',
+        description: 'Test',
+        status: 'done',
+        priority: 'low',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const now = new Date()
+      const twoDaysAgo = new Date(now.getTime() - 86400000 * 2)
+      const fiveDaysAgo = new Date(now.getTime() - 86400000 * 5)
+      
+      useToolingTrackerStore.setState((state) => ({
+        tasks: state.tasks.map((t) => {
+          if (t.priority === 'high') {
+            return { ...t, completedAt: now, createdAt: twoDaysAgo }
+          }
+          if (t.priority === 'low') {
+            return { ...t, completedAt: now, createdAt: fiveDaysAgo }
+          }
+          return t
+        }),
+      }))
+      
+      const result = store.getTaskEfficiencyMetrics()
+      
+      expect(result.byPriority).toBeDefined()
+      const highPriorityData = result.byPriority.find(p => p.category === 'high')
+      const lowPriorityData = result.byPriority.find(p => p.category === 'low')
+      
+      expect(highPriorityData).toBeDefined()
+      expect(highPriorityData!.avgCycleTimeDays).toBeGreaterThan(1.9)
+      expect(highPriorityData!.avgCycleTimeDays).toBeLessThan(2.1)
+      expect(highPriorityData!.taskCount).toBe(1)
+      
+      expect(lowPriorityData).toBeDefined()
+      expect(lowPriorityData!.avgCycleTimeDays).toBeGreaterThan(4.9)
+      expect(lowPriorityData!.avgCycleTimeDays).toBeLessThan(5.1)
+    })
+
+    it('should calculate average time spent by project', () => {
+      const store = useToolingTrackerStore.getState()
+      const project1Id = store.projects[0].id
+      
+      // Add second project
+      store.addProject('Project 2', 'green')
+      const project2Id = useToolingTrackerStore.getState().projects[1].id
+      
+      // Add tasks to both projects
+      store.addTask({
+        title: 'P1 Task',
+        description: 'Test',
+        status: 'done',
+        priority: 'medium',
+        projectId: project1Id,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      store.addTask({
+        title: 'P2 Task',
+        description: 'Test',
+        status: 'done',
+        priority: 'medium',
+        projectId: project2Id,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const task1 = useToolingTrackerStore.getState().tasks[0]
+      const task2 = useToolingTrackerStore.getState().tasks[1]
+      
+      const now = new Date()
+      const oneDayAgo = new Date(now.getTime() - 86400000)
+      
+      useToolingTrackerStore.setState((state) => ({
+        tasks: state.tasks.map((t) => ({
+          ...t,
+          completedAt: now,
+          createdAt: oneDayAgo,
+        })),
+      }))
+      
+      // Add time entries (3 hours for P1, 5 hours for P2)
+      store.addTimeEntry({
+        taskId: task1.id,
+        date: now,
+        hours: 3,
+        minutes: 0,
+        description: 'Work on P1',
+        type: 'development',
+      })
+      
+      store.addTimeEntry({
+        taskId: task2.id,
+        date: now,
+        hours: 5,
+        minutes: 0,
+        description: 'Work on P2',
+        type: 'development',
+      })
+      
+      const result = store.getTaskEfficiencyMetrics()
+      
+      expect(result.byProject).toBeDefined()
+      expect(result.byProject.length).toBeGreaterThan(0)
+      
+      const project1Data = result.byProject.find(p => p.category === store.projects[0].name)
+      const project2Data = result.byProject.find(p => p.category === 'Project 2')
+      
+      expect(project1Data).toBeDefined()
+      expect(project1Data!.avgTimeSpentMinutes).toBe(180) // 3 hours
+      
+      expect(project2Data).toBeDefined()
+      expect(project2Data!.avgTimeSpentMinutes).toBe(300) // 5 hours
+    })
+
+    it('should calculate overall averages correctly', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      // Add multiple completed tasks
+      for (let i = 0; i < 3; i++) {
+        store.addTask({
+          title: `Task ${i + 1}`,
+          description: 'Test',
+          status: 'done',
+          priority: 'medium',
+          projectId,
+          dueDate: null,
+          subcategory: null,
+          jiraKey: null,
+          storyPoints: null,
+        })
+      }
+      
+      const now = new Date()
+      const threeDaysAgo = new Date(now.getTime() - 86400000 * 3)
+      
+      useToolingTrackerStore.setState((state) => ({
+        tasks: state.tasks.map((t) => ({
+          ...t,
+          completedAt: now,
+          createdAt: threeDaysAgo,
+        })),
+      }))
+      
+      // Add time entries (2 hours each)
+      useToolingTrackerStore.getState().tasks.forEach((task) => {
+        store.addTimeEntry({
+          taskId: task.id,
+          date: now,
+          hours: 2,
+          minutes: 0,
+          description: 'Work',
+          type: 'development',
+        })
+      })
+      
+      const result = store.getTaskEfficiencyMetrics()
+      
+      expect(result.overallAvgCycleTime).toBeGreaterThan(2.9)
+      expect(result.overallAvgCycleTime).toBeLessThan(3.1)
+      expect(result.overallAvgTimeSpent).toBe(120) // 2 hours in minutes
+    })
+
+    it('should handle empty data gracefully', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      const result = store.getTaskEfficiencyMetrics()
+      
+      expect(result.byPriority).toEqual([])
+      expect(result.byProject).toEqual([])
+      expect(result.overallAvgCycleTime).toBe(0)
+      expect(result.overallAvgTimeSpent).toBe(0)
+    })
+
+    it('should group multiple tasks by priority correctly', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      // Add 2 high priority tasks
+      for (let i = 0; i < 2; i++) {
+        store.addTask({
+          title: `High Task ${i + 1}`,
+          description: 'Test',
+          status: 'done',
+          priority: 'high',
+          projectId,
+          dueDate: null,
+          subcategory: null,
+          jiraKey: null,
+          storyPoints: null,
+        })
+      }
+      
+      const now = new Date()
+      const twoDaysAgo = new Date(now.getTime() - 86400000 * 2)
+      
+      useToolingTrackerStore.setState((state) => ({
+        tasks: state.tasks.map((t) => ({
+          ...t,
+          completedAt: now,
+          createdAt: twoDaysAgo,
+        })),
+      }))
+      
+      const result = store.getTaskEfficiencyMetrics()
+      
+      const highPriorityData = result.byPriority.find(p => p.category === 'high')
+      expect(highPriorityData).toBeDefined()
+      expect(highPriorityData!.taskCount).toBe(2)
+    })
+  })
 })
 

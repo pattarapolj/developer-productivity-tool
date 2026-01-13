@@ -140,3 +140,32 @@ export interface WeeklySummaryData {
   timeByType: Record<TimeEntryType, number>
   dailyTrend: { day: string; minutes: number }[]
 }
+
+export interface VelocityWeekData {
+  week: string
+  weekStart: Date
+  weekEnd: Date
+  completed: number
+  avgCycleTime: number
+}
+
+export interface VelocityMetrics {
+  weeklyData: VelocityWeekData[]
+  avgVelocity: number
+  avgCycleTime: number
+  trend: 'up' | 'down' | 'stable'
+}
+
+export interface TaskEfficiencyData {
+  category: string
+  avgCycleTimeDays: number
+  avgTimeSpentMinutes: number
+  taskCount: number
+}
+
+export interface TaskEfficiencyMetrics {
+  byPriority: TaskEfficiencyData[]
+  byProject: TaskEfficiencyData[]
+  overallAvgCycleTime: number
+  overallAvgTimeSpent: number
+}
