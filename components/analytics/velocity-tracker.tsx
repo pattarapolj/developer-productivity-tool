@@ -3,17 +3,23 @@
 import { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { useToolingTrackerStore } from '@/lib/store'
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { TrendingUp, TrendingDown, Minus, Target, Clock, Activity } from 'lucide-react'
-import type { VelocityWeekData } from '@/lib/types'
+import { ComparisonView } from './comparison-view'
+import type { VelocityWeekData, ComparisonPeriod } from '@/lib/types'
 
 type TimeRange = '4W' | '8W' | '12W'
 
 export function VelocityTracker() {
   const [timeRange, setTimeRange] = useState<TimeRange>('8W')
+  const [showComparison, setShowComparison] = useState(false)
+  const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>('week-over-week')
   const getVelocityData = useToolingTrackerStore((state) => state.getVelocityData)
   const getAverageCycleTime = useToolingTrackerStore((state) => state.getAverageCycleTime)
+  const getComparisonData = useToolingTrackerStore((state) => state.getComparisonData)
 
   const weeksCount = useMemo(() => {
     switch (timeRange) {
@@ -85,6 +91,11 @@ export function VelocityTracker() {
 
   const hasData = velocityData.some(week => week.completed > 0)
 
+  const comparisonData = useMemo(() => {
+    if (!showComparison) return null
+    return getComparisonData(comparisonPeriod)
+  }, [showComparison, comparisonPeriod, getComparisonData])
+
   return (
     <div className="space-y-6">
       {/* Header with Time Range Selector */}
@@ -119,6 +130,52 @@ export function VelocityTracker() {
           </Button>
         </div>
       </div>
+
+      {/* Comparison Controls */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-comparison"
+                checked={showComparison}
+                onCheckedChange={setShowComparison}
+              />
+              <Label htmlFor="show-comparison">Show Period Comparison</Label>
+            </div>
+            {showComparison && (
+              <div className="flex gap-2">
+                <Button
+                  variant={comparisonPeriod === 'week-over-week' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setComparisonPeriod('week-over-week')}
+                >
+                  Week-over-Week
+                </Button>
+                <Button
+                  variant={comparisonPeriod === 'month-over-month' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setComparisonPeriod('month-over-month')}
+                >
+                  Month-over-Month
+                </Button>
+                <Button
+                  variant={comparisonPeriod === 'quarter-over-quarter' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setComparisonPeriod('quarter-over-quarter')}
+                >
+                  Quarter-over-Quarter
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Comparison View */}
+      {showComparison && comparisonData && (
+        <ComparisonView data={comparisonData} period={comparisonPeriod} />
+      )}
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

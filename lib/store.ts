@@ -17,7 +17,9 @@ import type {
   DeepWorkSession,
   VelocityWeekData,
   TaskEfficiencyMetrics,
-  HistoryEntry
+  HistoryEntry,
+  ComparisonPeriod,
+  ComparisonData
 } from "./types"
 
 interface ToolingTrackerState {
@@ -39,7 +41,10 @@ interface ToolingTrackerState {
   addSubcategoryToProject: (projectId: string, name: string) => void
 
   // Task actions
-  addTask: (task: Omit<Task, "id" | "createdAt" | "updatedAt" | "completedAt" | "isArchived" | "archivedAt" | "blockedBy" | "blocking">) => void
+  addTask: (task: Omit<Task, "id" | "createdAt" | "updatedAt" | "completedAt" | "isArchived" | "archivedAt" | "blockedBy" | "blocking"> & {
+    createdAt?: Date
+    completedAt?: Date | null
+  }) => Task | undefined
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
   moveTask: (id: string, status: TaskStatus) => void
@@ -73,6 +78,7 @@ interface ToolingTrackerState {
   getTasksCompletedInRange: (startDate: Date, endDate: Date) => Task[]
   getTimeBreakdownByType: (startDate: Date, endDate: Date) => Record<TimeEntryType, number>
   getProductivityTrend: (startDate: Date, endDate: Date) => { day: string; minutes: number }[]
+  getComparisonData: (period: ComparisonPeriod, referenceDate?: Date) => ComparisonData
   getVelocityData: (weeksBack: number) => VelocityWeekData[]
   getAverageCycleTime: (projectId?: string) => number
   getTaskEfficiencyMetrics: () => TaskEfficiencyMetrics
@@ -213,9 +219,9 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           subcategory: task.subcategory?.trim() || null,
           jiraKey: task.jiraKey?.trim() || null,
           storyPoints: typeof task.storyPoints === "number" ? task.storyPoints : null,
-          createdAt: now,
+          createdAt: task.createdAt || now,
           updatedAt: now,
-          completedAt: task.status === 'done' ? now : null,
+          completedAt: task.completedAt || (task.status === 'done' ? now : null),
           isArchived: false,
           archivedAt: null,
           blockedBy: [],
@@ -236,6 +242,8 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           tasks: [...state.tasks, newTask],
           activities: [...state.activities, activity]
         }))
+        
+        return newTask
       },
 
       updateTask: (id, updates) => {
@@ -760,6 +768,166 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         }
         
         return trend
+      },
+
+      getComparisonData: (period, referenceDate = new Date()) => {
+        const { tasks, timeEntries } = get()
+        
+        // Helper to get date ranges based on period type
+        const getDateRanges = (refDate: Date) => {
+          const ref = new Date(refDate)
+          let currentStart: Date, currentEnd: Date, previousStart: Date, previousEnd: Date
+          
+          if (period === "week-over-week") {
+            // Current week: Sunday to Saturday (using UTC to avoid timezone issues)
+            currentStart = new Date(Date.UTC(
+              ref.getUTCFullYear(),
+              ref.getUTCMonth(),
+              ref.getUTCDate() - ref.getUTCDay(), // Go to Sunday
+              0, 0, 0, 0
+            ))
+            
+            currentEnd = new Date(Date.UTC(
+              currentStart.getUTCFullYear(),
+              currentStart.getUTCMonth(),
+              currentStart.getUTCDate() + 6, // Go to Saturday
+              23, 59, 59, 999
+            ))
+            
+            // Previous week
+            previousEnd = new Date(Date.UTC(
+              currentStart.getUTCFullYear(),
+              currentStart.getUTCMonth(),
+              currentStart.getUTCDate() - 1, // Saturday of previous week
+              23, 59, 59, 999
+            ))
+            previousStart = new Date(Date.UTC(
+              previousEnd.getUTCFullYear(),
+              previousEnd.getUTCMonth(),
+              previousEnd.getUTCDate() - 6, // Sunday of previous week
+              0, 0, 0, 0
+            ))
+          } else if (period === "month-over-month") {
+            // Current month: 1st to last day (using UTC)
+            currentStart = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 1, 0, 0, 0, 0))
+            currentEnd = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() + 1, 0, 23, 59, 59, 999))
+            
+            // Previous month
+            previousStart = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() - 1, 1, 0, 0, 0, 0))
+            previousEnd = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 0, 23, 59, 59, 999))
+          } else {
+            // quarter-over-quarter (using UTC)
+            const currentQuarter = Math.floor(ref.getUTCMonth() / 3)
+            currentStart = new Date(Date.UTC(ref.getUTCFullYear(), currentQuarter * 3, 1, 0, 0, 0, 0))
+            currentEnd = new Date(Date.UTC(ref.getUTCFullYear(), (currentQuarter + 1) * 3, 0, 23, 59, 59, 999))
+            
+            // Previous quarter
+            const previousQuarter = currentQuarter - 1
+            const previousYear = previousQuarter < 0 ? ref.getUTCFullYear() - 1 : ref.getUTCFullYear()
+            const adjustedQuarter = previousQuarter < 0 ? 3 : previousQuarter
+            previousStart = new Date(Date.UTC(previousYear, adjustedQuarter * 3, 1, 0, 0, 0, 0))
+            previousEnd = new Date(Date.UTC(previousYear, (adjustedQuarter + 1) * 3, 0, 23, 59, 59, 999))
+          }
+          
+          return { currentStart, currentEnd, previousStart, previousEnd }
+        }
+        
+        const { currentStart, currentEnd, previousStart, previousEnd } = getDateRanges(referenceDate)
+        
+        // Filter non-archived tasks
+        const activeTasks = tasks.filter(t => !t.archivedAt)
+        
+        // Calculate current period metrics
+        const currentCompleted = activeTasks.filter(t => 
+          t.completedAt && 
+          new Date(t.completedAt) >= currentStart && 
+          new Date(t.completedAt) <= currentEnd
+        )
+        const currentCreated = activeTasks.filter(t => 
+          new Date(t.createdAt) >= currentStart && 
+          new Date(t.createdAt) <= currentEnd
+        )
+        const currentTimeEntries = timeEntries.filter(e => 
+          new Date(e.date) >= currentStart && 
+          new Date(e.date) <= currentEnd
+        )
+        const currentTotalTime = currentTimeEntries.reduce((sum, e) => sum + e.hours * 60 + e.minutes, 0)
+        
+        // Calculate average completion time for current period
+        let currentAvgCompletionTime = 0
+        if (currentCompleted.length > 0) {
+          const totalDays = currentCompleted.reduce((sum, task) => {
+            const created = new Date(task.createdAt).getTime()
+            const completed = new Date(task.completedAt!).getTime()
+            const days = (completed - created) / (1000 * 60 * 60 * 24)
+            return sum + days
+          }, 0)
+          currentAvgCompletionTime = Math.round(totalDays / currentCompleted.length)
+        }
+        
+        // Calculate previous period metrics
+        const previousCompleted = activeTasks.filter(t => 
+          t.completedAt && 
+          new Date(t.completedAt) >= previousStart && 
+          new Date(t.completedAt) <= previousEnd
+        )
+        const previousCreated = activeTasks.filter(t => 
+          new Date(t.createdAt) >= previousStart && 
+          new Date(t.createdAt) <= previousEnd
+        )
+        const previousTimeEntries = timeEntries.filter(e => 
+          new Date(e.date) >= previousStart && 
+          new Date(e.date) <= previousEnd
+        )
+        const previousTotalTime = previousTimeEntries.reduce((sum, e) => sum + e.hours * 60 + e.minutes, 0)
+        
+        // Calculate average completion time for previous period
+        let previousAvgCompletionTime = 0
+        if (previousCompleted.length > 0) {
+          const totalDays = previousCompleted.reduce((sum, task) => {
+            const created = new Date(task.createdAt).getTime()
+            const completed = new Date(task.completedAt!).getTime()
+            const days = (completed - created) / (1000 * 60 * 60 * 24)
+            return sum + days
+          }, 0)
+          previousAvgCompletionTime = Math.round(totalDays / previousCompleted.length)
+        }
+        
+        // Calculate deltas and percentages
+        const calculateDelta = (current: number, previous: number) => ({
+          absolute: current - previous,
+          percent: previous === 0 ? 0 : Math.round(((current - previous) / previous) * 100)
+        })
+        
+        const completedDelta = calculateDelta(currentCompleted.length, previousCompleted.length)
+        const createdDelta = calculateDelta(currentCreated.length, previousCreated.length)
+        const timeDelta = calculateDelta(currentTotalTime, previousTotalTime)
+        const avgCompletionDelta = calculateDelta(currentAvgCompletionTime, previousAvgCompletionTime)
+        
+        return {
+          current: {
+            tasksCompleted: currentCompleted.length,
+            tasksCreated: currentCreated.length,
+            totalTime: currentTotalTime,
+            avgCompletionTime: currentAvgCompletionTime,
+          },
+          previous: {
+            tasksCompleted: previousCompleted.length,
+            tasksCreated: previousCreated.length,
+            totalTime: previousTotalTime,
+            avgCompletionTime: previousAvgCompletionTime,
+          },
+          delta: {
+            tasksCompleted: completedDelta.absolute,
+            tasksCompletedPercent: completedDelta.percent,
+            tasksCreated: createdDelta.absolute,
+            tasksCreatedPercent: createdDelta.percent,
+            totalTime: timeDelta.absolute,
+            totalTimePercent: timeDelta.percent,
+            avgCompletionTime: avgCompletionDelta.absolute,
+            avgCompletionTimePercent: avgCompletionDelta.percent,
+          },
+        }
       },
 
       getVelocityData: (weeksBack) => {
