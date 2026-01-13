@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock, TrendingUp, TrendingDown, FolderKanban, CheckCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { FocusTime } from "@/components/analytics/focus-time"
+import { DailyStandup } from "@/components/analytics/daily-standup"
 
 const CHART_COLORS = [
   "oklch(0.65 0.18 250)", // blue
@@ -95,6 +96,9 @@ export function AnalyticsDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Daily Standup - High Priority for Daily Use */}
+      <DailyStandup />
+
       <div className="grid grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">

@@ -66,6 +66,8 @@ interface ToolingTrackerState {
   getArchiveStats: () => { total: number; byProject: Record<string, number> }
   getTimeByEntryType: (startDate?: Date, endDate?: Date) => TimeByEntryType[]
   getDeepWorkSessions: (minHours: number) => DeepWorkSession[]
+  getActivitiesByDateRange: (startDate: Date, endDate: Date) => Activity[]
+  getTasksCompletedInRange: (startDate: Date, endDate: Date) => Task[]
   
   // Activity actions
   addActivity: (activity: Omit<Activity, "id" | "createdAt">) => void
@@ -649,6 +651,25 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           }))
 
         return result
+      },
+
+      getActivitiesByDateRange: (startDate, endDate) => {
+        const { activities } = get()
+        
+        return activities.filter((activity) => {
+          const activityDate = new Date(activity.createdAt)
+          return activityDate >= startDate && activityDate <= endDate
+        })
+      },
+
+      getTasksCompletedInRange: (startDate, endDate) => {
+        const { tasks } = get()
+        
+        return tasks.filter((task) => {
+          if (!task.completedAt) return false
+          const completedDate = new Date(task.completedAt)
+          return completedDate >= startDate && completedDate <= endDate
+        })
       },
 
       // Activity actions

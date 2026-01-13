@@ -368,4 +368,272 @@ describe('Focus Time Analysis - Store Helpers', () => {
       expect(result).toEqual([])
     })
   })
+
+  describe('getActivitiesByDateRange', () => {
+    it('should filter activities by date range correctly', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      // Add a task
+      store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'in-progress',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+
+      // Manually add activities with different dates
+      const activities = [
+        {
+          id: 'act1',
+          taskId,
+          type: 'task_created' as const,
+          description: 'Task created',
+          createdAt: new Date('2026-01-09T10:00:00.000Z'),
+        },
+        {
+          id: 'act2',
+          taskId,
+          type: 'time_logged' as const,
+          description: 'Logged 2h',
+          createdAt: new Date('2026-01-10T14:00:00.000Z'),
+        },
+        {
+          id: 'act3',
+          taskId,
+          type: 'time_logged' as const,
+          description: 'Logged 1h',
+          createdAt: new Date('2026-01-11T16:00:00.000Z'),
+        },
+        {
+          id: 'act4',
+          taskId,
+          type: 'task_status_changed' as const,
+          description: 'Status changed',
+          createdAt: new Date('2026-01-12T09:00:00.000Z'),
+        },
+      ]
+
+      useToolingTrackerStore.setState({ activities })
+
+      // Filter for Jan 10-11 (should get act2 and act3)
+      const startDate = new Date('2026-01-10T00:00:00.000Z')
+      const endDate = new Date('2026-01-11T23:59:59.999Z')
+      
+      const result = store.getActivitiesByDateRange(startDate, endDate)
+
+      expect(result).toHaveLength(2)
+      expect(result[0].id).toBe('act2')
+      expect(result[1].id).toBe('act3')
+    })
+
+    it('should include activities on boundary dates', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'in-progress',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+
+      const activities = [
+        {
+          id: 'act1',
+          taskId,
+          type: 'time_logged' as const,
+          description: 'Start of day',
+          createdAt: new Date('2026-01-10T00:00:00.000Z'),
+        },
+        {
+          id: 'act2',
+          taskId,
+          type: 'time_logged' as const,
+          description: 'End of day',
+          createdAt: new Date('2026-01-10T23:59:59.999Z'),
+        },
+      ]
+
+      useToolingTrackerStore.setState({ activities })
+
+      const startDate = new Date('2026-01-10T00:00:00.000Z')
+      const endDate = new Date('2026-01-10T23:59:59.999Z')
+      
+      const result = store.getActivitiesByDateRange(startDate, endDate)
+
+      expect(result).toHaveLength(2)
+    })
+
+    it('should return empty array when no activities in range', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      const startDate = new Date('2026-01-10T00:00:00.000Z')
+      const endDate = new Date('2026-01-10T23:59:59.999Z')
+      
+      const result = store.getActivitiesByDateRange(startDate, endDate)
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('getTasksCompletedInRange', () => {
+    it('should filter tasks by completedAt date correctly', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      // Add tasks with different completion dates
+      const tasks = [
+        {
+          id: 'task1',
+          title: 'Task 1',
+          description: 'Test',
+          status: 'done' as const,
+          priority: 'medium' as const,
+          projectId,
+          dueDate: null,
+          subcategory: null,
+          jiraKey: null,
+          storyPoints: null,
+          createdAt: new Date('2026-01-08'),
+          updatedAt: new Date('2026-01-09'),
+          completedAt: new Date('2026-01-09T15:00:00.000Z'),
+          isArchived: false,
+          archivedAt: null,
+          blockedBy: [],
+          blocking: [],
+        },
+        {
+          id: 'task2',
+          title: 'Task 2',
+          description: 'Test',
+          status: 'done' as const,
+          priority: 'high' as const,
+          projectId,
+          dueDate: null,
+          subcategory: null,
+          jiraKey: null,
+          storyPoints: null,
+          createdAt: new Date('2026-01-10'),
+          updatedAt: new Date('2026-01-10'),
+          completedAt: new Date('2026-01-10T14:30:00.000Z'),
+          isArchived: false,
+          archivedAt: null,
+          blockedBy: [],
+          blocking: [],
+        },
+        {
+          id: 'task3',
+          title: 'Task 3',
+          description: 'Test',
+          status: 'done' as const,
+          priority: 'low' as const,
+          projectId,
+          dueDate: null,
+          subcategory: null,
+          jiraKey: null,
+          storyPoints: null,
+          createdAt: new Date('2026-01-11'),
+          updatedAt: new Date('2026-01-11'),
+          completedAt: new Date('2026-01-11T10:00:00.000Z'),
+          isArchived: false,
+          archivedAt: null,
+          blockedBy: [],
+          blocking: [],
+        },
+        {
+          id: 'task4',
+          title: 'Task 4',
+          description: 'Test',
+          status: 'in-progress' as const,
+          priority: 'medium' as const,
+          projectId,
+          dueDate: null,
+          subcategory: null,
+          jiraKey: null,
+          storyPoints: null,
+          createdAt: new Date('2026-01-10'),
+          updatedAt: new Date('2026-01-10'),
+          completedAt: null,
+          isArchived: false,
+          archivedAt: null,
+          blockedBy: [],
+          blocking: [],
+        },
+      ]
+
+      useToolingTrackerStore.setState({ tasks })
+
+      // Filter for Jan 10-11 (should get task2 and task3)
+      const startDate = new Date('2026-01-10T00:00:00.000Z')
+      const endDate = new Date('2026-01-11T23:59:59.999Z')
+      
+      const result = store.getTasksCompletedInRange(startDate, endDate)
+
+      expect(result).toHaveLength(2)
+      expect(result[0].id).toBe('task2')
+      expect(result[1].id).toBe('task3')
+    })
+
+    it('should only return tasks with completedAt dates', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      const tasks = [
+        {
+          id: 'task1',
+          title: 'Incomplete Task',
+          description: 'Test',
+          status: 'in-progress' as const,
+          priority: 'medium' as const,
+          projectId,
+          dueDate: null,
+          subcategory: null,
+          jiraKey: null,
+          storyPoints: null,
+          createdAt: new Date('2026-01-10'),
+          updatedAt: new Date('2026-01-10'),
+          completedAt: null,
+          isArchived: false,
+          archivedAt: null,
+          blockedBy: [],
+          blocking: [],
+        },
+      ]
+
+      useToolingTrackerStore.setState({ tasks })
+
+      const startDate = new Date('2026-01-10T00:00:00.000Z')
+      const endDate = new Date('2026-01-10T23:59:59.999Z')
+      
+      const result = store.getTasksCompletedInRange(startDate, endDate)
+
+      expect(result).toEqual([])
+    })
+
+    it('should return empty array when no tasks completed in range', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      const startDate = new Date('2026-01-10T00:00:00.000Z')
+      const endDate = new Date('2026-01-10T23:59:59.999Z')
+      
+      const result = store.getTasksCompletedInRange(startDate, endDate)
+
+      expect(result).toEqual([])
+    })
+  })
 })
