@@ -12,7 +12,9 @@ import type {
   TaskComment,
   TaskAttachment,
   TaskHistory,
-  TimeEntryType
+  TimeEntryType,
+  TimeByEntryType,
+  DeepWorkSession
 } from "./types"
 
 interface ToolingTrackerState {
@@ -62,6 +64,8 @@ interface ToolingTrackerState {
   getFilteredTasks: () => Task[]
   getArchivedTasks: () => Task[]
   getArchiveStats: () => { total: number; byProject: Record<string, number> }
+  getTimeByEntryType: (startDate?: Date, endDate?: Date) => TimeByEntryType[]
+  getDeepWorkSessions: (minHours: number) => DeepWorkSession[]
   
   // Activity actions
   addActivity: (activity: Omit<Activity, "id" | "createdAt">) => void
@@ -568,6 +572,83 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           total: archivedTasks.length,
           byProject,
         }
+      },
+
+      getTimeByEntryType: (startDate?: Date, endDate?: Date) => {
+        const { timeEntries } = get()
+        
+        // Filter by date range if provided
+        let filteredEntries = timeEntries
+        if (startDate || endDate) {
+          filteredEntries = timeEntries.filter((entry) => {
+            const entryDate = new Date(entry.date)
+            if (startDate && entryDate < startDate) return false
+            if (endDate && entryDate > endDate) return false
+            return true
+          })
+        }
+
+        // Group by type and calculate totals
+        const typeMap = new Map<TimeEntryType, number>()
+        filteredEntries.forEach((entry) => {
+          const minutes = entry.hours * 60 + entry.minutes
+          typeMap.set(entry.type, (typeMap.get(entry.type) || 0) + minutes)
+        })
+
+        // Calculate total for percentages
+        const totalMinutes = Array.from(typeMap.values()).reduce((sum, min) => sum + min, 0)
+
+        // Convert to array with percentages
+        const result: TimeByEntryType[] = Array.from(typeMap.entries())
+          .map(([type, minutes]) => ({
+            type,
+            minutes,
+            percentage: totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 100) : 0,
+          }))
+          .filter((item) => item.minutes > 0)
+
+        return result
+      },
+
+      getDeepWorkSessions: (minHours: number) => {
+        const { timeEntries } = get()
+        const minMinutes = minHours * 60
+
+        // Filter only development entries
+        const devEntries = timeEntries.filter((entry) => entry.type === 'development')
+
+        // Group by date + taskId
+        const sessionMap = new Map<string, { taskId: string; date: Date; minutes: number }>()
+        
+        devEntries.forEach((entry) => {
+          const entryDate = new Date(entry.date)
+          const dateKey = entryDate.toISOString().split('T')[0] // YYYY-MM-DD
+          const key = `${dateKey}-${entry.taskId}`
+          
+          const minutes = entry.hours * 60 + entry.minutes
+          const existing = sessionMap.get(key)
+          
+          if (existing) {
+            existing.minutes += minutes
+          } else {
+            sessionMap.set(key, {
+              taskId: entry.taskId,
+              date: entryDate,
+              minutes,
+            })
+          }
+        })
+
+        // Filter sessions that meet minimum threshold and convert to result format
+        const result: DeepWorkSession[] = Array.from(sessionMap.values())
+          .filter((session) => session.minutes >= minMinutes)
+          .map((session) => ({
+            taskId: session.taskId,
+            date: session.date,
+            duration: session.minutes,
+          }))
+
+        return result
       },
 
       // Activity actions
