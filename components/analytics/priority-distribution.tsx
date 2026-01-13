@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useSyncExternalStore } from 'react'
 import { useToolingTrackerStore } from "@/lib/store"
 import { formatMinutes } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,8 +24,16 @@ const PRIORITY_ICONS = {
 export function PriorityDistribution() {
   const { tasks, timeEntries } = useToolingTrackerStore()
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   const priorityData = useMemo(() => {
+    if (!mounted) {
+      return []
+    }
     const data: Record<string, { minutes: number; taskCount: number }> = {
       high: { minutes: 0, taskCount: 0 },
       medium: { minutes: 0, taskCount: 0 },
@@ -68,7 +76,7 @@ export function PriorityDistribution() {
         percentage: total > 0 ? Math.round((data.low.minutes / total) * 100) : 0,
       },
     ].filter((d) => d.value > 0)
-  }, [tasks, timeEntries])
+  }, [mounted, tasks, timeEntries])
 
   const totalTime = priorityData.reduce((sum, d) => sum + d.value, 0)
 

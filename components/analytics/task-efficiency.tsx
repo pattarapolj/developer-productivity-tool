@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToolingTrackerStore } from '@/lib/store'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
@@ -9,10 +9,25 @@ import { formatMinutes } from '@/lib/utils'
 
 export function TaskEfficiency() {
   const getTaskEfficiencyMetrics = useToolingTrackerStore((state) => state.getTaskEfficiencyMetrics)
+  
+  // Hydration-safe client-side detection
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   const metrics = useMemo(() => {
+    if (!mounted) {
+      return {
+        overallAvgCycleTime: 0,
+        overallAvgTimeSpent: 0,
+        byPriority: [],
+        byProject: []
+      }
+    }
     return getTaskEfficiencyMetrics()
-  }, [getTaskEfficiencyMetrics])
+  }, [mounted, getTaskEfficiencyMetrics])
 
   const hasData = metrics.byPriority.length > 0 || metrics.byProject.length > 0
 

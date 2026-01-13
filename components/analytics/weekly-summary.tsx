@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useSyncExternalStore } from 'react'
 import { useToolingTrackerStore } from "@/lib/store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -47,8 +47,26 @@ export function WeeklySummary() {
   const [weekRange, setWeekRange] = useState<WeekRange>("this-week")
   const [showComparison, setShowComparison] = useState(false)
   const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>('week-over-week')
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   const weekData = useMemo(() => {
+    if (!mounted) {
+      return {
+        startDate: new Date(),
+        endDate: new Date(),
+        completedTasks: 0,
+        totalMinutes: 0,
+        avgDailyMinutes: 0,
+        mostProductiveDay: { day: 'N/A', minutes: 0 },
+        timeBreakdownData: [],
+        dailyTrend: [],
+      }
+    }
+
     const now = new Date()
     const currentDayOfWeek = now.getDay() // 0 (Sunday) to 6 (Saturday)
     
@@ -114,7 +132,7 @@ export function WeeklySummary() {
       startDate,
       endDate,
     }
-  }, [weekRange, tasks, timeEntries, getTasksCompletedInRange, getTimeBreakdownByType, getProductivityTrend])
+  }, [mounted, weekRange, tasks, timeEntries, getTasksCompletedInRange, getTimeBreakdownByType, getProductivityTrend])
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {

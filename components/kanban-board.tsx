@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useSyncExternalStore } from "react"
 import { useToolingTrackerStore } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { TaskCard } from "./task-card"
@@ -43,18 +43,11 @@ export function KanbanBoard({
   const [createStatus, setCreateStatus] = useState<TaskStatus>("todo")
   const [draggedTask, setDraggedTask] = useState<Task | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null)
-  const [mounted, setMounted] = useState(false)
-
-  // Fix hydration mismatch by only rendering tasks after mount
-  useEffect(() => {
-    let isMounted = true
-    if (isMounted) {
-      setMounted(true)
-    }
-    return () => {
-      isMounted = false
-    }
-  }, [])
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   // Recompute filtered tasks whenever tasks or filters change
   // Don't include getFilteredTasks in deps as it's a stable function reference

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useSyncExternalStore } from "react"
 import { Bookmark, Trash2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -36,11 +36,12 @@ export function FilterPresetManager({
   const [presets, setPresets] = useState<FilterPreset[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [presetName, setPresetName] = useState("")
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const [presetToDelete, setPresetToDelete] = useState<string | null>(null)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   useEffect(() => {
     if (mounted) {

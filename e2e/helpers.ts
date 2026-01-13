@@ -109,7 +109,7 @@ export async function seedSampleData(page: Page) {
       },
     ]
 
-    const activities = []
+    const activities: any[] = []
 
     const state = {
       projects,

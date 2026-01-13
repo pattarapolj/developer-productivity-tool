@@ -32,8 +32,10 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus = "todo" }:
   const [jiraKey, setJiraKey] = useState("")
   const [storyPoints, setStoryPoints] = useState("")
 
+  // Sync form state with task prop (editing mode)
   useEffect(() => {
     if (task) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(task.title)
       setDescription(task.description)
       setStatus(task.status)

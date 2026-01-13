@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useSyncExternalStore } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -20,6 +20,11 @@ export function VelocityTracker() {
   const [showComparison, setShowComparison] = useState(false)
   const [showTrendLine, setShowTrendLine] = useState(true)
   const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>('week-over-week')
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
   const getVelocityData = useToolingTrackerStore((state) => state.getVelocityData)
   const getAverageCycleTime = useToolingTrackerStore((state) => state.getAverageCycleTime)
   const getComparisonData = useToolingTrackerStore((state) => state.getComparisonData)
@@ -33,11 +38,12 @@ export function VelocityTracker() {
   }, [timeRange])
 
   const velocityData = useMemo(() => {
+    if (!mounted) return []
     return getVelocityData(weeksCount)
-  }, [getVelocityData, weeksCount])
+  }, [mounted, getVelocityData, weeksCount])
 
   const metrics = useMemo(() => {
-    if (velocityData.length === 0) {
+    if (!mounted || velocityData.length === 0) {
       return {
         avgVelocity: 0,
         avgCycleTime: 0,
@@ -74,7 +80,7 @@ export function VelocityTracker() {
       recentVelocity: Math.round(recentVelocity * 10) / 10,
       previousVelocity: Math.round(previousVelocity * 10) / 10,
     }
-  }, [velocityData, getAverageCycleTime])
+  }, [mounted, velocityData, getAverageCycleTime])
 
   const getTrendIcon = () => {
     switch (metrics.trend) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { useToolingTrackerStore } from "@/lib/store"
 import { cn, getProjectColorClass, formatMinutes } from "@/lib/utils"
@@ -9,8 +9,19 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 
 export function CalendarView() {
   const { tasks, projects, timeEntries, selectedProjectId } = useToolingTrackerStore()
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
+  const [currentDate, setCurrentDate] = useState(new Date(0))
   const [viewMode, setViewMode] = useState<"due" | "log">("due")
+
+  // Initialize current date after mount to avoid SSR date mismatch
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrentDate(new Date())
+  }, [])
 
   const filteredTasks = selectedProjectId ? tasks.filter((t) => t.projectId === selectedProjectId) : tasks
   const taskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks])
