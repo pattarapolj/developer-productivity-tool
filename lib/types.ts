@@ -106,6 +106,19 @@ export interface TaskHistory {
   changedAt: Date
 }
 
+export interface HistoryEntry {
+  id: string
+  taskId: string
+  field: string
+  fieldLabel: string
+  oldValue: string
+  newValue: string
+  oldValueFormatted: string
+  newValueFormatted: string
+  changedAt: Date
+  changeType: 'created' | 'updated' | 'status_changed' | 'deleted'
+}
+
 export interface TimeByEntryType {
   type: TimeEntryType
   minutes: number

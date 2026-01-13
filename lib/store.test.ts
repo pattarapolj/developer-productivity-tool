@@ -1285,5 +1285,136 @@ describe('Focus Time Analysis - Store Helpers', () => {
       expect(highPriorityData!.taskCount).toBe(2)
     })
   })
+
+  describe('trackFieldChange and getFormattedHistory', () => {
+    it('should track field changes when task is updated', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo',
+        priority: 'low',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+      
+      // Update priority
+      store.updateTask(taskId, { priority: 'high' })
+      
+      const history = store.getHistoryForTask(taskId)
+      expect(history.length).toBeGreaterThan(0)
+      
+      const priorityChange = history.find(h => h.field === 'priority')
+      expect(priorityChange).toBeDefined()
+      expect(priorityChange!.oldValue).toBe('low')
+      expect(priorityChange!.newValue).toBe('high')
+    })
+
+    it('should format history entries with labels', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+      
+      // Update status
+      store.updateTask(taskId, { status: 'in-progress' })
+      
+      const formattedHistory = store.getFormattedHistory(taskId)
+      expect(formattedHistory.length).toBeGreaterThan(0)
+      
+      const statusChange = formattedHistory.find(h => h.field === 'status')
+      expect(statusChange).toBeDefined()
+      expect(statusChange!.fieldLabel).toBe('Status')
+      expect(statusChange!.oldValueFormatted).toBe('To Do')
+      expect(statusChange!.newValueFormatted).toBe('In Progress')
+    })
+
+    it('should format priority with capitalization', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo',
+        priority: 'low',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+      
+      // Update priority
+      store.updateTask(taskId, { priority: 'high' })
+      
+      const formattedHistory = store.getFormattedHistory(taskId)
+      const priorityChange = formattedHistory.find(h => h.field === 'priority')
+      
+      expect(priorityChange).toBeDefined()
+      expect(priorityChange!.oldValueFormatted).toBe('Low')
+      expect(priorityChange!.newValueFormatted).toBe('High')
+    })
+
+    it('should track multiple field changes', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo',
+        priority: 'low',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+      
+      // Multiple updates
+      store.updateTask(taskId, { priority: 'high' })
+      store.updateTask(taskId, { status: 'in-progress' })
+      store.updateTask(taskId, { title: 'Updated Task' })
+      
+      const history = store.getHistoryForTask(taskId)
+      expect(history.length).toBeGreaterThanOrEqual(3)
+      
+      const fields = history.map(h => h.field)
+      expect(fields).toContain('priority')
+      expect(fields).toContain('status')
+      expect(fields).toContain('title')
+    })
+
+    it('should return empty array for task with no history', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      const history = store.getFormattedHistory('nonexistent-task')
+      expect(history).toEqual([])
+    })
+  })
 })
 
