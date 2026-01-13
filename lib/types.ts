@@ -105,3 +105,23 @@ export interface TaskHistory {
   newValue: string
   changedAt: Date
 }
+
+export interface TimeByEntryType {
+  type: TimeEntryType
+  minutes: number
+  percentage: number
+}
+
+export interface DeepWorkSession {
+  date: Date
+  duration: number
+  taskId: string
+}
+
+export interface FocusTimeMetrics {
+  timeByType: TimeByEntryType[]
+  totalMinutes: number
+  meetingMinutes: number
+  developmentMinutes: number
+  deepWorkSessions: DeepWorkSession[]
+}

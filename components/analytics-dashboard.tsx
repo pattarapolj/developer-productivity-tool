@@ -6,6 +6,7 @@ import { formatMinutes, cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Clock, TrendingUp, TrendingDown, FolderKanban, CheckCircle } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+import { FocusTime } from "@/components/analytics/focus-time"
 
 const CHART_COLORS = [
   "oklch(0.65 0.18 250)", // blue
@@ -247,6 +248,9 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Focus Time Analysis Section */}
+      <FocusTime />
     </div>
   )
 }
