@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useToolingTrackerStore } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { TaskCard } from "./task-card"
@@ -31,6 +31,7 @@ export function KanbanBoard({
   onToggleTask 
 }: KanbanBoardProps) {
   const { 
+    tasks,  // Subscribe to tasks array directly to trigger re-renders
     getFilteredTasks, 
     selectedProjectId, 
     moveTask, 
@@ -55,7 +56,11 @@ export function KanbanBoard({
     }
   }, [])
 
-  const filteredTasks = mounted ? getFilteredTasks() : []
+  // Recompute filtered tasks whenever tasks or filters change
+  // Don't include getFilteredTasks in deps as it's a stable function reference
+  const filteredTasks = useMemo(() => {
+    return mounted ? getFilteredTasks() : []
+  }, [mounted, tasks, boardFilters, selectedProjectId])
 
   const getTasksForColumn = (status: TaskStatus) => 
     filteredTasks.filter((t) => t.status === status)
