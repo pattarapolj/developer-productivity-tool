@@ -54,7 +54,7 @@ export async function createProjectViaStore(page: Page) {
   
   // Force a page reload to trigger proper Zustand rehydration
   await page.reload()
-  await page.waitForLoadState('dom content loaded')
+  await page.waitForLoadState('domcontentloaded')
   await page.waitForLoadState('networkidle')
   // Wait longer for Zustand to fully hydrate
   await page.waitForTimeout(2000)

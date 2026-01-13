@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { useToolingTrackerStore } from "@/lib/store"
 import { cn, formatMinutes, getProjectColorClass } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,8 +37,13 @@ export function TaskAging() {
   const { tasks, projects, getTimeForTask } = useToolingTrackerStore()
   const [sortBy, setSortBy] = useState<SortBy>("age")
   const [showAll, setShowAll] = useState(false)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
-  const now = new Date()
+  const now = mounted ? new Date() : new Date(0)
 
   const inProgressTasks = tasks
     .filter((task) => task.status === "in-progress")

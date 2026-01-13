@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useSyncExternalStore } from "react"
 import { useToolingTrackerStore } from "@/lib/store"
 import { formatMinutes, cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,8 +22,22 @@ const CHART_COLORS = [
 
 export function AnalyticsDashboard() {
   const { tasks, projects, timeEntries, getTotalTimeForProject } = useToolingTrackerStore()
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   const stats = useMemo(() => {
+    if (!mounted) {
+      return {
+        thisMonthMinutes: 0,
+        lastMonthMinutes: 0,
+        percentChange: 0,
+        completedTasks: 0,
+        activeProjects: 0
+      }
+    }
     const now = new Date()
     const thisMonth = now.getUTCMonth()
     const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1
@@ -56,9 +70,12 @@ export function AnalyticsDashboard() {
       completedTasks,
       activeProjects,
     }
-  }, [tasks, projects, timeEntries])
+  }, [mounted, tasks, projects, timeEntries])
 
   const dailyData = useMemo(() => {
+    if (!mounted) {
+      return []
+    }
     const data: { date: string; minutes: number }[] = []
     const now = new Date()
     const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
@@ -85,7 +102,7 @@ export function AnalyticsDashboard() {
     }
 
     return data
-  }, [timeEntries])
+  }, [mounted, timeEntries])
 
   const projectData = useMemo(() => {
     return projects

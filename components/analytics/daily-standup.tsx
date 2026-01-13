@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useSyncExternalStore } from "react"
 import Link from "next/link"
 import { useToolingTrackerStore } from "@/lib/store"
 import { formatMinutes, getProjectColorClass } from "@/lib/utils"
@@ -10,11 +10,11 @@ import { Clock, CheckCircle2, AlertCircle } from "lucide-react"
 
 export function DailyStandup() {
   const { tasks, projects, getTimeForTask, getTasksCompletedInRange, getBlockedTasks } = useToolingTrackerStore()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   const standupData = useMemo(() => {
     if (!mounted) {

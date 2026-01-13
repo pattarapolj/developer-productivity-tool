@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useSyncExternalStore } from "react"
 import { useToolingTrackerStore } from "@/lib/store"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -65,10 +65,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export function ThroughputChart() {
   const { tasks } = useToolingTrackerStore()
   const [timeRange, setTimeRange] = useState<TimeRange>("3months")
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   const monthCount = timeRange === "1month" ? 1 : timeRange === "3months" ? 3 : 6
 
   const monthlyData = useMemo(() => {
+    if (!mounted) {
+      return []
+    }
     const data: MonthData[] = []
     const now = new Date()
 
@@ -112,7 +120,7 @@ export function ThroughputChart() {
     }
 
     return data
-  }, [tasks, monthCount])
+  }, [mounted, tasks, monthCount])
 
   const stats = useMemo(() => {
     if (monthlyData.length < 1) return { avg: 0, trend: 0, trendDirection: "stable" as const }

@@ -63,6 +63,7 @@ describe('KanbanBoard Component', () => {
   ]
 
   const mockStore = {
+    tasks: mockTasks,
     getFilteredTasks: vi.fn(() => mockTasks),
     moveTask: vi.fn(),
     archiveTask: vi.fn(),

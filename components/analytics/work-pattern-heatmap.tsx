@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { useToolingTrackerStore } from "@/lib/store"
 import { formatMinutes, cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,10 +27,15 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 export function WorkPatternHeatmap() {
   const { timeEntries } = useToolingTrackerStore()
   const [viewMode, setViewMode] = useState<ViewMode>("3months")
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   const weeksToShow = viewMode === "1month" ? 5 : viewMode === "3months" ? 13 : 26
 
-  const now = new Date()
+  const now = mounted ? new Date() : new Date(0)
   const endDate = new Date(now)
   endDate.setHours(23, 59, 59, 999)
 

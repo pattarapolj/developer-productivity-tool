@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useSyncExternalStore } from 'react'
 import { useToolingTrackerStore } from "@/lib/store"
 import { formatMinutes, cn, getProjectColorClass } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,10 +26,26 @@ interface DayFocus {
 export function ProjectFocusRatio() {
   const { projects, tasks, timeEntries } = useToolingTrackerStore()
   const [timeRange, setTimeRange] = useState<TimeRange>("3months")
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   const daysToShow = timeRange === "1month" ? 30 : timeRange === "3months" ? 90 : 180
 
   const { dailyFocus, stats } = useMemo(() => {
+    if (!mounted) {
+      return {
+        dailyFocus: [],
+        stats: { 
+          avgFocusScore: 0, 
+          avgProjectsPerDay: 0, 
+          contextSwitchRate: 0,
+          trend: 0
+        }
+      }
+    }
     const now = new Date()
     const dailyData: DayFocus[] = []
 
@@ -120,7 +136,7 @@ export function ProjectFocusRatio() {
         trend,
       },
     }
-  }, [projects, tasks, timeEntries, daysToShow])
+  }, [mounted, projects, tasks, timeEntries, daysToShow])
 
   const getFocusColor = (score: number) => {
     if (score < 0) return "bg-secondary/30"

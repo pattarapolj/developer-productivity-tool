@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useSyncExternalStore } from 'react'
 import { useToolingTrackerStore } from "@/lib/store"
 import { formatMinutes } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,8 +32,16 @@ export function FocusTime() {
   const { getTimeByEntryType, getDeepWorkSessions } = useToolingTrackerStore()
   const [viewMode, setViewMode] = useState<ViewMode>("3months")
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined)
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   const dateRange = useMemo(() => {
+    if (!mounted) {
+      return { startDate: new Date(0), endDate: new Date(0) }
+    }
     const now = new Date()
     const endDate = new Date(now)
     endDate.setHours(23, 59, 59, 999)
@@ -49,7 +57,7 @@ export function FocusTime() {
     startDate.setHours(0, 0, 0, 0)
 
     return { startDate, endDate }
-  }, [viewMode])
+  }, [mounted, viewMode])
 
   const timeByType = useMemo(() => {
     return getTimeByEntryType(dateRange.startDate, dateRange.endDate)
