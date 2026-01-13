@@ -42,6 +42,13 @@ export interface BoardFilters {
   showArchived: boolean
 }
 
+export interface FilterPreset {
+  id: string
+  name: string
+  filters: BoardFilters
+  createdAt: Date
+}
+
 export type TimeEntryType = "development" | "meeting" | "review" | "research" | "debugging" | "other"
 
 export interface TimeEntry {

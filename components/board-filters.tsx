@@ -11,6 +11,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { DateRangePicker } from "@/components/date-range-picker"
+import { FilterPresetManager } from "@/components/filter-preset-manager"
 import {
   Search,
   Filter,
@@ -138,7 +140,13 @@ export function BoardFilters({
         {/* Date range filter */}
         <Select
           value={boardFilters.dateRange}
-          onValueChange={(value) => setBoardFilters({ dateRange: value as typeof boardFilters.dateRange })}
+          onValueChange={(value) => {
+            setBoardFilters({ 
+              dateRange: value as typeof boardFilters.dateRange,
+              // Clear custom dates when switching away from custom
+              ...(value !== "custom" && { customStart: null, customEnd: null })
+            })
+          }}
         >
           <SelectTrigger className="w-[140px] h-9">
             <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
@@ -150,8 +158,20 @@ export function BoardFilters({
             <SelectItem value="week">This week</SelectItem>
             <SelectItem value="month">This month</SelectItem>
             <SelectItem value="quarter">This quarter</SelectItem>
+            <SelectItem value="custom">Custom range</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Custom date range picker */}
+        {boardFilters.dateRange === "custom" && (
+          <DateRangePicker
+            start={boardFilters.customStart}
+            end={boardFilters.customEnd}
+            onRangeChange={(start, end) => {
+              setBoardFilters({ customStart: start, customEnd: end })
+            }}
+          />
+        )}
 
         {/* Clear filters */}
         {hasActiveFilters && (
@@ -234,6 +254,28 @@ export function BoardFilters({
           </Button>
         </div>
       )}
+
+      {/* Filter Presets */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="sm" className="w-fit">
+            <Filter className="w-4 h-4 mr-2" />
+            Filter Presets
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-96" align="start">
+          <FilterPresetManager
+            currentFilters={boardFilters}
+            onApplyPreset={(filters) => {
+              setBoardFilters(filters)
+              toast({
+                title: "Preset applied",
+                description: "Filter preset has been applied.",
+              })
+            }}
+          />
+        </PopoverContent>
+      </Popover>
 
       {/* Active filters indicator */}
       {hasActiveFilters && (
