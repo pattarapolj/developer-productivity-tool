@@ -131,3 +131,12 @@ export interface StandupData {
   today: Task[]
   blockers: Task[]
 }
+
+export interface WeeklySummaryData {
+  tasksCompleted: number
+  totalMinutes: number
+  avgDailyMinutes: number
+  mostProductiveDay: string
+  timeByType: Record<TimeEntryType, number>
+  dailyTrend: { day: string; minutes: number }[]
+}
