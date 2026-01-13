@@ -122,6 +122,8 @@ const DEFAULT_BOARD_FILTERS: BoardFilters = {
   projectId: null,
   priority: "all",
   dateRange: "all",
+  customStart: null,
+  customEnd: null,
   showArchived: false,
 }
 
@@ -505,7 +507,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       getFilteredTasks: () => {
         const { tasks, boardFilters, selectedProjectId } = get()
-        const { search, projectId, priority, dateRange, showArchived } = boardFilters
+        const { search, projectId, priority, dateRange, customStart, customEnd, showArchived } = boardFilters
 
         return tasks.filter((task) => {
           // Handle tasks that may not have isArchived field yet (migration)
@@ -538,28 +540,41 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             const now = new Date()
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
             
-            switch (dateRange) {
-              case "today": {
-                if (taskDate < startOfDay) return false
-                break
+            if (dateRange === "custom") {
+              // Use custom date range if provided
+              if (customStart && customEnd) {
+                const customStartDate = new Date(customStart)
+                const customEndDate = new Date(customEnd)
+                customStartDate.setHours(0, 0, 0, 0)
+                customEndDate.setHours(23, 59, 59, 999)
+                
+                if (taskDate < customStartDate || taskDate > customEndDate) return false
               }
-              case "week": {
-                const weekAgo = new Date(startOfDay)
-                weekAgo.setDate(weekAgo.getDate() - 7)
-                if (taskDate < weekAgo) return false
-                break
-              }
-              case "month": {
-                const monthAgo = new Date(startOfDay)
-                monthAgo.setMonth(monthAgo.getMonth() - 1)
-                if (taskDate < monthAgo) return false
-                break
-              }
-              case "quarter": {
-                const quarterAgo = new Date(startOfDay)
-                quarterAgo.setMonth(quarterAgo.getMonth() - 3)
-                if (taskDate < quarterAgo) return false
-                break
+            } else {
+              // Use preset date ranges
+              switch (dateRange) {
+                case "today": {
+                  if (taskDate < startOfDay) return false
+                  break
+                }
+                case "week": {
+                  const weekAgo = new Date(startOfDay)
+                  weekAgo.setDate(weekAgo.getDate() - 7)
+                  if (taskDate < weekAgo) return false
+                  break
+                }
+                case "month": {
+                  const monthAgo = new Date(startOfDay)
+                  monthAgo.setMonth(monthAgo.getMonth() - 1)
+                  if (taskDate < monthAgo) return false
+                  break
+                }
+                case "quarter": {
+                  const quarterAgo = new Date(startOfDay)
+                  quarterAgo.setMonth(quarterAgo.getMonth() - 3)
+                  if (taskDate < quarterAgo) return false
+                  break
+                }
               }
             }
           }

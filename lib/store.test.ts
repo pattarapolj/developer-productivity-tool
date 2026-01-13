@@ -19,6 +19,8 @@ describe('Focus Time Analysis - Store Helpers', () => {
         projectId: null,
         priority: 'all',
         dateRange: 'all',
+        customStart: null,
+        customEnd: null,
         showArchived: false,
       },
     })
@@ -1414,6 +1416,146 @@ describe('Focus Time Analysis - Store Helpers', () => {
       
       const history = store.getFormattedHistory('nonexistent-task')
       expect(history).toEqual([])
+    })
+  })
+
+  describe('Custom Date Range Filtering', () => {
+    it('should filter tasks by custom date range', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+
+      // Create tasks with different dates
+      const task1Date = new Date('2026-01-01')
+      const task2Date = new Date('2026-01-15')
+      const task3Date = new Date('2026-01-31')
+
+      store.addTask({
+        title: 'Task 1',
+        description: 'Early January',
+        status: 'todo',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      store.addTask({
+        title: 'Task 2',
+        description: 'Mid January',
+        status: 'todo',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      store.addTask({
+        title: 'Task 3',
+        description: 'Late January',
+        status: 'todo',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      // Manually set creation dates
+      const tasks = useToolingTrackerStore.getState().tasks
+      tasks[0].createdAt = task1Date
+      tasks[1].createdAt = task2Date
+      tasks[2].createdAt = task3Date
+
+      // Set custom date range filter (Jan 10 - Jan 20)
+      store.setBoardFilters({
+        dateRange: 'custom',
+        customStart: new Date('2026-01-10'),
+        customEnd: new Date('2026-01-20'),
+      })
+
+      const filtered = store.getFilteredTasks()
+
+      // Should only include task 2 (Jan 15)
+      expect(filtered).toHaveLength(1)
+      expect(filtered[0].title).toBe('Task 2')
+    })
+
+    it('should include tasks on boundary dates', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+
+      store.addTask({
+        title: 'Start Task',
+        description: 'On start date',
+        status: 'todo',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      store.addTask({
+        title: 'End Task',
+        description: 'On end date',
+        status: 'todo',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      const tasks = useToolingTrackerStore.getState().tasks
+      tasks[0].createdAt = new Date('2026-01-10T08:00:00')
+      tasks[1].createdAt = new Date('2026-01-20T16:00:00')
+
+      store.setBoardFilters({
+        dateRange: 'custom',
+        customStart: new Date('2026-01-10'),
+        customEnd: new Date('2026-01-20'),
+      })
+
+      const filtered = store.getFilteredTasks()
+
+      // Should include both boundary tasks
+      expect(filtered).toHaveLength(2)
+    })
+
+    it('should ignore custom dates when dateRange is not "custom"', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+
+      store.addTask({
+        title: 'Task',
+        description: 'Test',
+        status: 'todo',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      // Set custom dates but use "all" dateRange
+      store.setBoardFilters({
+        dateRange: 'all',
+        customStart: new Date('2026-01-01'),
+        customEnd: new Date('2026-01-02'),
+      })
+
+      const filtered = store.getFilteredTasks()
+
+      // Should include task even though custom dates are set
+      expect(filtered).toHaveLength(1)
     })
   })
 })
