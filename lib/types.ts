@@ -1,0 +1,107 @@
+export type Priority = "low" | "medium" | "high"
+export type TaskStatus = "backlog" | "todo" | "in-progress" | "done"
+
+export type ProjectColor = "blue" | "green" | "purple" | "orange" | "pink"
+
+export interface Project {
+  id: string
+  name: string
+  color: ProjectColor
+  createdAt: Date
+  subcategories: string[]
+  jiraKey: string | null
+}
+
+export interface Task {
+  id: string
+  title: string
+  description: string
+  status: TaskStatus
+  priority: Priority
+  dueDate: Date | null
+  subcategory: string | null
+  jiraKey: string | null
+  storyPoints: number | null
+  projectId: string
+  createdAt: Date
+  updatedAt: Date
+  completedAt: Date | null
+  isArchived: boolean
+  archivedAt: Date | null
+  blockedBy: string[] // Task IDs that block this task
+  blocking: string[] // Task IDs that this task blocks
+}
+
+export interface BoardFilters {
+  search: string
+  projectId: string | null
+  priority: Priority | "all"
+  dateRange: "all" | "today" | "week" | "month" | "quarter"
+  showArchived: boolean
+}
+
+export type TimeEntryType = "development" | "meeting" | "review" | "research" | "debugging" | "other"
+
+export interface TimeEntry {
+  id: string
+  taskId: string
+  hours: number
+  minutes: number
+  date: Date
+  notes: string
+  type: TimeEntryType
+  createdAt: Date
+}
+
+export interface TaskWithTime extends Task {
+  totalMinutes: number
+  timeEntries: TimeEntry[]
+  project?: Project
+}
+
+export type ActivityType = 
+  | "task_created"
+  | "task_updated" 
+  | "task_status_changed"
+  | "task_archived"
+  | "task_unarchived"
+  | "task_deleted"
+  | "time_logged"
+  | "comment_added"
+  | "attachment_added"
+
+export interface Activity {
+  id: string
+  taskId: string
+  type: ActivityType
+  description: string
+  metadata?: Record<string, unknown>
+  createdAt: Date
+}
+
+export interface TaskComment {
+  id: string
+  taskId: string
+  content: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface TaskAttachment {
+  id: string
+  taskId: string
+  fileName: string
+  fileSize: number
+  fileType: string
+  dataUrl: string // base64 data URL for small files
+  uploadedAt: Date
+}
+
+export interface TaskHistory {
+  id: string
+  taskId: string
+  field: string
+  oldValue: string
+  newValue: string
+  changedAt: Date
+}
