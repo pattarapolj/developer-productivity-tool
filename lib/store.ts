@@ -68,6 +68,8 @@ interface ToolingTrackerState {
   getDeepWorkSessions: (minHours: number) => DeepWorkSession[]
   getActivitiesByDateRange: (startDate: Date, endDate: Date) => Activity[]
   getTasksCompletedInRange: (startDate: Date, endDate: Date) => Task[]
+  getTimeBreakdownByType: (startDate: Date, endDate: Date) => Record<TimeEntryType, number>
+  getProductivityTrend: (startDate: Date, endDate: Date) => { day: string; minutes: number }[]
   
   // Activity actions
   addActivity: (activity: Omit<Activity, "id" | "createdAt">) => void
@@ -670,6 +672,71 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           const completedDate = new Date(task.completedAt)
           return completedDate >= startDate && completedDate <= endDate
         })
+      },
+
+      getTimeBreakdownByType: (startDate, endDate) => {
+        const { timeEntries } = get()
+        
+        const breakdown: Record<TimeEntryType, number> = {
+          development: 0,
+          meeting: 0,
+          review: 0,
+          research: 0,
+          debugging: 0,
+          other: 0,
+        }
+        
+        timeEntries.forEach((entry) => {
+          const entryDate = new Date(entry.date)
+          if (entryDate >= startDate && entryDate <= endDate) {
+            const minutes = entry.hours * 60 + entry.minutes
+            breakdown[entry.type] = (breakdown[entry.type] || 0) + minutes
+          }
+        })
+        
+        return breakdown
+      },
+
+      getProductivityTrend: (startDate, endDate) => {
+        const { timeEntries } = get()
+        const trend: { day: string; minutes: number }[] = []
+        
+        // Calculate number of days between start and end (inclusive)
+        const start = new Date(startDate)
+        start.setHours(0, 0, 0, 0)
+        const end = new Date(endDate)
+        end.setHours(0, 0, 0, 0)
+        
+        const dayCount = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        
+        // Generate data for each day
+        for (let i = 0; i < dayCount; i++) {
+          const currentDay = new Date(start)
+          currentDay.setDate(start.getDate() + i)
+          
+          const dayStart = new Date(currentDay)
+          dayStart.setHours(0, 0, 0, 0)
+          const dayEnd = new Date(currentDay)
+          dayEnd.setHours(23, 59, 59, 999)
+          
+          // Calculate total minutes for this day
+          const dayMinutes = timeEntries
+            .filter((entry) => {
+              const entryDate = new Date(entry.date)
+              return entryDate >= dayStart && entryDate <= dayEnd
+            })
+            .reduce((sum, entry) => sum + entry.hours * 60 + entry.minutes, 0)
+          
+          // Format day label (e.g., "Mon 13", "Tue 14")
+          const dayLabel = currentDay.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
+          
+          trend.push({
+            day: dayLabel,
+            minutes: dayMinutes,
+          })
+        }
+        
+        return trend
       },
 
       // Activity actions

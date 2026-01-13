@@ -636,4 +636,177 @@ describe('Focus Time Analysis - Store Helpers', () => {
       expect(result).toEqual([])
     })
   })
+
+  describe('getTimeBreakdownByType', () => {
+    it('should group time entries correctly by type', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'in-progress',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+      const date = new Date('2026-01-10')
+      
+      // Add different types of time entries
+      store.addTimeEntry({ taskId, hours: 2, minutes: 30, date, notes: 'Dev', type: 'development' })
+      store.addTimeEntry({ taskId, hours: 1, minutes: 0, date, notes: 'Meeting', type: 'meeting' })
+      store.addTimeEntry({ taskId, hours: 0, minutes: 45, date, notes: 'Review', type: 'review' })
+      store.addTimeEntry({ taskId, hours: 1, minutes: 15, date, notes: 'More dev', type: 'development' })
+
+      const startDate = new Date('2026-01-09')
+      const endDate = new Date('2026-01-11')
+      const result = store.getTimeBreakdownByType(startDate, endDate)
+
+      expect(result.development).toBe(2 * 60 + 30 + 1 * 60 + 15) // 225 minutes
+      expect(result.meeting).toBe(60) // 60 minutes
+      expect(result.review).toBe(45) // 45 minutes
+      expect(result.research || 0).toBe(0)
+      expect(result.debugging || 0).toBe(0)
+      expect(result.other || 0).toBe(0)
+    })
+
+    it('should filter by date range correctly', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'in-progress',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+      
+      // Add entries on different dates
+      store.addTimeEntry({ taskId, hours: 2, minutes: 0, date: new Date('2026-01-09'), notes: 'Before', type: 'development' })
+      store.addTimeEntry({ taskId, hours: 3, minutes: 0, date: new Date('2026-01-10'), notes: 'During', type: 'development' })
+      store.addTimeEntry({ taskId, hours: 1, minutes: 0, date: new Date('2026-01-11'), notes: 'After', type: 'development' })
+
+      const startDate = new Date('2026-01-10')
+      startDate.setHours(0, 0, 0, 0)
+      const endDate = new Date('2026-01-10')
+      endDate.setHours(23, 59, 59, 999)
+      
+      const result = store.getTimeBreakdownByType(startDate, endDate)
+
+      expect(result.development).toBe(180) // Only the 3-hour entry
+    })
+
+    it('should return zeros for all types when no entries exist', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      const startDate = new Date('2026-01-10')
+      const endDate = new Date('2026-01-11')
+      const result = store.getTimeBreakdownByType(startDate, endDate)
+
+      expect(result.development || 0).toBe(0)
+      expect(result.meeting || 0).toBe(0)
+      expect(result.review || 0).toBe(0)
+      expect(result.research || 0).toBe(0)
+      expect(result.debugging || 0).toBe(0)
+      expect(result.other || 0).toBe(0)
+    })
+  })
+
+  describe('getProductivityTrend', () => {
+    it('should generate daily data points for date range', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'in-progress',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+      
+      // Add entries on different days
+      store.addTimeEntry({ taskId, hours: 2, minutes: 0, date: new Date('2026-01-10'), notes: 'Day 1', type: 'development' })
+      store.addTimeEntry({ taskId, hours: 3, minutes: 30, date: new Date('2026-01-11'), notes: 'Day 2', type: 'development' })
+      store.addTimeEntry({ taskId, hours: 1, minutes: 15, date: new Date('2026-01-11'), notes: 'Day 2 more', type: 'meeting' })
+
+      const startDate = new Date('2026-01-10')
+      startDate.setHours(0, 0, 0, 0)
+      const endDate = new Date('2026-01-12')
+      endDate.setHours(23, 59, 59, 999)
+      
+      const result = store.getProductivityTrend(startDate, endDate)
+
+      expect(result).toHaveLength(3) // 3 days
+      expect(result[0].minutes).toBe(120) // 2 hours
+      expect(result[1].minutes).toBe(3 * 60 + 30 + 1 * 60 + 15) // 285 minutes
+      expect(result[2].minutes).toBe(0) // No entries
+    })
+
+    it('should include days with no entries as 0', () => {
+      const store = useToolingTrackerStore.getState()
+      const projectId = store.projects[0].id
+      
+      store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'in-progress',
+        priority: 'medium',
+        projectId,
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+      
+      const taskId = useToolingTrackerStore.getState().tasks[0].id
+      
+      // Add entry only on first day
+      store.addTimeEntry({ taskId, hours: 4, minutes: 0, date: new Date('2026-01-10'), notes: 'Only day', type: 'development' })
+
+      const startDate = new Date('2026-01-10')
+      const endDate = new Date('2026-01-16') // 7 days
+      
+      const result = store.getProductivityTrend(startDate, endDate)
+
+      expect(result).toHaveLength(7)
+      expect(result[0].minutes).toBe(240) // First day: 4 hours
+      expect(result[1].minutes).toBe(0)
+      expect(result[2].minutes).toBe(0)
+      expect(result[6].minutes).toBe(0)
+    })
+
+    it('should format day labels correctly', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      const startDate = new Date('2026-01-10')
+      const endDate = new Date('2026-01-12')
+      
+      const result = store.getProductivityTrend(startDate, endDate)
+
+      expect(result).toHaveLength(3)
+      expect(result[0].day).toBeTruthy() // Should have a day label
+      expect(result[1].day).toBeTruthy()
+      expect(result[2].day).toBeTruthy()
+    })
+  })
 })
+

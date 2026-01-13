@@ -8,6 +8,7 @@ import { Clock, TrendingUp, TrendingDown, FolderKanban, CheckCircle } from "luci
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 import { FocusTime } from "@/components/analytics/focus-time"
 import { DailyStandup } from "@/components/analytics/daily-standup"
+import { WeeklySummary } from "@/components/analytics/weekly-summary"
 
 const CHART_COLORS = [
   "oklch(0.65 0.18 250)", // blue
@@ -252,6 +253,12 @@ export function AnalyticsDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Daily Standup - High priority, shown first */}
+      <DailyStandup />
+
+      {/* Weekly Summary - Overview of the week */}
+      <WeeklySummary />
 
       {/* Focus Time Analysis Section */}
       <FocusTime />
