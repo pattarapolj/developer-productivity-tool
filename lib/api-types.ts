@@ -13,6 +13,7 @@ import type {
   TaskHistory,
   Activity,
 } from './types'
+import { transformDateFromDB, parseJSONField } from './api-utils'
 
 /**
  * Prisma Project type (from database)
@@ -249,8 +250,6 @@ export interface APISuccessResponse<T> {
  * Transform Prisma project to client project
  */
 export const transformPrismaProjectToClient = (prismaProject: PrismaProject): Project => {
-  const { transformDateFromDB, parseJSONField } = require('./api-utils')
-  
   return {
     id: prismaProject.id,
     name: prismaProject.name,
@@ -265,8 +264,6 @@ export const transformPrismaProjectToClient = (prismaProject: PrismaProject): Pr
  * Transform Prisma task to client task
  */
 export const transformPrismaTaskToClient = (prismaTask: PrismaTask): Task => {
-  const { transformDateFromDB, parseJSONField } = require('./api-utils')
-  
   return {
     id: prismaTask.id,
     title: prismaTask.title,
@@ -292,8 +289,6 @@ export const transformPrismaTaskToClient = (prismaTask: PrismaTask): Task => {
  * Transform Prisma time entry to client time entry
  */
 export const transformPrismaTimeEntryToClient = (prismaEntry: PrismaTimeEntry): TimeEntry => {
-  const { transformDateFromDB } = require('./api-utils')
-  
   return {
     id: prismaEntry.id,
     taskId: prismaEntry.taskId,
@@ -310,8 +305,6 @@ export const transformPrismaTimeEntryToClient = (prismaEntry: PrismaTimeEntry): 
  * Transform Prisma comment to client comment
  */
 export const transformPrismaCommentToClient = (prismaComment: PrismaTaskComment): TaskComment => {
-  const { transformDateFromDB } = require('./api-utils')
-  
   return {
     id: prismaComment.id,
     taskId: prismaComment.taskId,
@@ -325,8 +318,6 @@ export const transformPrismaCommentToClient = (prismaComment: PrismaTaskComment)
  * Transform Prisma attachment to client attachment
  */
 export const transformPrismaAttachmentToClient = (prismaAttachment: PrismaTaskAttachment): TaskAttachment => {
-  const { transformDateFromDB } = require('./api-utils')
-  
   return {
     id: prismaAttachment.id,
     taskId: prismaAttachment.taskId,
@@ -342,8 +333,6 @@ export const transformPrismaAttachmentToClient = (prismaAttachment: PrismaTaskAt
  * Transform Prisma history to client history
  */
 export const transformPrismaHistoryToClient = (prismaHistory: PrismaTaskHistory): TaskHistory => {
-  const { transformDateFromDB } = require('./api-utils')
-  
   return {
     id: prismaHistory.id,
     taskId: prismaHistory.taskId,
@@ -358,8 +347,6 @@ export const transformPrismaHistoryToClient = (prismaHistory: PrismaTaskHistory)
  * Transform Prisma activity to client activity
  */
 export const transformPrismaActivityToClient = (prismaActivity: PrismaActivity): Activity => {
-  const { transformDateFromDB, parseJSONField } = require('./api-utils')
-  
   return {
     id: prismaActivity.id,
     taskId: prismaActivity.taskId,
