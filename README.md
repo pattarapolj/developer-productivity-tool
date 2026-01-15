@@ -99,7 +99,6 @@ This is my personal project to build a comprehensive productivity tracking tool 
 
 ## 📸 Screenshots
 
-> **Note**: To add screenshots, capture the following pages and save them in `docs/images/`:
 
 ### Kanban Board
 ![Kanban Board](docs/images/kanban-board.png)
