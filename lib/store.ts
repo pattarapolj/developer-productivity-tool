@@ -47,7 +47,7 @@ interface ToolingTrackerState {
   addTask: (task: Omit<Task, "id" | "createdAt" | "updatedAt" | "completedAt" | "isArchived" | "archivedAt" | "blockedBy" | "blocking"> & {
     createdAt?: Date
     completedAt?: Date | null
-  }) => Task | undefined
+  }) => Promise<Task | undefined>
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
   moveTask: (id: string, status: TaskStatus) => void
@@ -242,56 +242,37 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         }
       },
 
-      addTask: (task) => {
+      addTask: async (task) => {
         if (!task.title?.trim()) {
           console.error('Task title is required')
-          return
+          return undefined
         }
         if (!task.projectId) {
           console.error('Task projectId is required')
-          return
-        }
-        // Validate project exists
-        const projectExists = get().projects.some(p => p.id === task.projectId)
-        if (!projectExists) {
-          console.error('Project not found:', task.projectId)
-          return
-        }
-        const taskId = generateId()
-        const now = new Date()
-        const newTask: Task = {
-          ...task,
-          id: taskId,
-          title: task.title.trim(),
-          description: task.description?.trim() || '',
-          subcategory: task.subcategory?.trim() || null,
-          jiraKey: task.jiraKey?.trim() || null,
-          storyPoints: typeof task.storyPoints === "number" ? task.storyPoints : null,
-          createdAt: task.createdAt || now,
-          updatedAt: now,
-          completedAt: task.completedAt || (task.status === 'done' ? now : null),
-          isArchived: false,
-          archivedAt: null,
-          blockedBy: [],
-          blocking: [],
+          return undefined
         }
         
-        // Log activity
-        const activity = {
-          id: generateId(),
-          taskId,
-          type: 'task_created' as const,
-          description: `Task "${newTask.title}" created`,
-          metadata: { projectId: newTask.projectId, status: newTask.status },
-          createdAt: now,
+        set({ isLoading: true, error: null })
+        
+        try {
+          const response = await apiClient.post<Task>('/api/tasks', {
+            ...task,
+            title: task.title.trim(),
+            description: task.description?.trim() || '',
+          })
+          
+          set((state) => ({ 
+            tasks: [...state.tasks, response],
+            isLoading: false 
+          }))
+          
+          return response
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to create task'
+          set({ error: message, isLoading: false })
+          console.error('Failed to create task:', error)
+          return undefined
         }
-        
-        set((state) => ({ 
-          tasks: [...state.tasks, newTask],
-          activities: [...state.activities, activity]
-        }))
-        
-        return newTask
       },
 
       updateTask: (id, updates) => {
