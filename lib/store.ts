@@ -32,6 +32,8 @@ interface ToolingTrackerState {
   history: TaskHistory[]
   selectedProjectId: string | null
   boardFilters: BoardFilters
+  isLoading: boolean
+  error: string | null
 
   // Project actions
   addProject: (name: string, color: ProjectColor, jiraKey?: string | null) => void
@@ -116,6 +118,10 @@ interface ToolingTrackerState {
     timeEntries: Omit<TimeEntry, 'type'>[] 
   }) => void
   clearAllData: () => void
+  
+  // Loading and error state
+  setLoading: (loading: boolean) => void
+  setError: (error: string | null) => void
 }
 
 const generateId = () =>
@@ -145,6 +151,8 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       history: [],
       selectedProjectId: null,
       boardFilters: DEFAULT_BOARD_FILTERS,
+      isLoading: false,
+      error: null,
 
       addProject: (name, color, jiraKey) => {
         if (!name?.trim()) {
@@ -1373,6 +1381,15 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           boardFilters: DEFAULT_BOARD_FILTERS,
         })
       },
+
+      // Loading and error state actions
+      setLoading: (loading) => {
+        set({ isLoading: loading })
+      },
+
+      setError: (error) => {
+        set({ error })
+      },
     }),
     {
       name: "ToolingTracker-storage",
@@ -1408,6 +1425,12 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         
         if (state && !state.boardFilters) {
           state.boardFilters = DEFAULT_BOARD_FILTERS
+        }
+        
+        // Initialize loading/error state
+        if (state) {
+          if (state.isLoading === undefined) state.isLoading = false
+          if (state.error === undefined) state.error = null
         }
         return state
       },

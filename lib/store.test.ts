@@ -1558,5 +1558,98 @@ describe('Focus Time Analysis - Store Helpers', () => {
       expect(filtered).toHaveLength(1)
     })
   })
+
+  describe('Loading and Error State', () => {
+    it('should initialize with loading false and no error', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      expect(store.isLoading).toBe(false)
+      expect(store.error).toBeNull()
+    })
+
+    it('should set loading state', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      store.setLoading(true)
+      expect(store.isLoading).toBe(true)
+      
+      store.setLoading(false)
+      expect(store.isLoading).toBe(false)
+    })
+
+    it('should set error state', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      store.setError('Test error message')
+      expect(store.error).toBe('Test error message')
+    })
+
+    it('should clear error with null', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      store.setError('Error')
+      expect(store.error).toBe('Error')
+      
+      store.setError(null)
+      expect(store.error).toBeNull()
+    })
+
+    it('should support loading sequence: false -> true -> false', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      expect(store.isLoading).toBe(false)
+      
+      store.setLoading(true)
+      expect(store.isLoading).toBe(true)
+      
+      store.setLoading(false)
+      expect(store.isLoading).toBe(false)
+    })
+
+    it('should support error sequence: null -> message -> null', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      expect(store.error).toBeNull()
+      
+      store.setError('Network error')
+      expect(store.error).toBe('Network error')
+      
+      store.setError(null)
+      expect(store.error).toBeNull()
+    })
+
+    it('should allow updating both loading and error independently', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      store.setLoading(true)
+      expect(store.isLoading).toBe(true)
+      expect(store.error).toBeNull()
+      
+      store.setError('Error occurred')
+      expect(store.isLoading).toBe(true)
+      expect(store.error).toBe('Error occurred')
+      
+      store.setLoading(false)
+      expect(store.isLoading).toBe(false)
+      expect(store.error).toBe('Error occurred')
+      
+      store.setError(null)
+      expect(store.isLoading).toBe(false)
+      expect(store.error).toBeNull()
+    })
+
+    it('should handle multiple error updates', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      store.setError('Error 1')
+      expect(store.error).toBe('Error 1')
+      
+      store.setError('Error 2')
+      expect(store.error).toBe('Error 2')
+      
+      store.setError(null)
+      expect(store.error).toBeNull()
+    })
+  })
 })
 

@@ -14,4 +14,6 @@ export default defineConfig({
       '@': path.resolve(__dirname, './'),
     },
   },
-})
+  define: {
+    'process.env.NODE_ENV': '"test"',
+  },})
