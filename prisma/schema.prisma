@@ -4,43 +4,127 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  // url      = env("DATABASE_URL")
+  url      = "file:./dev.db"
 }
 
 model Project {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String
   color         String
-  createdAt     DateTime @default(now())
-  subcategories String   @default("[]")
+  createdAt     DateTime   @default(now())
+  subcategories String     @default("[]") // JSON array stored as string
   jiraKey       String?
   tasks         Task[]
+  activities    Activity[]
 }
 
 model Task {
-  id          String      @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
-  description String?
-  status      String
-  priority    String
+  description String    @default("")
+  status      String // "backlog" | "todo" | "in-progress" | "done"
+  priority    String // "low" | "medium" | "high"
   dueDate     DateTime?
   subcategory String?
   jiraKey     String?
   storyPoints Int?
-  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId   String
+  isArchived  Boolean   @default(false)
+  archivedAt  DateTime?
+  completedAt DateTime?
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
   timeEntries TimeEntry[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  activities  Activity[]
+  comments    TaskComment[]
+  attachments TaskAttachment[]
+  history     TaskHistory[]
+
+  // Task dependencies - store as JSON
+  blockedBy String @default("[]") // JSON array of task IDs
+  blocking  String @default("[]") // JSON array of task IDs
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@index([isArchived])
 }
 
 model TimeEntry {
-  id        String   @id @default(cuid())
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  taskId    String
-  hours     Int
-  minutes   Int
-  date      DateTime
-  notes     String?
+  id     String @id @default(cuid())
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  hours   Int
+  minutes Int
+  date    DateTime
+  notes   String   @default("")
+  type    String   @default("development") // "development" | "meeting" | "review" | "research" | "debugging" | "other"
+
   createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([date])
+}
+
+model Activity {
+  id     String @id @default(cuid())
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId String?
+
+  type        String // "task_created" | "task_updated" | "task_status_changed" | etc.
+  description String
+  metadata    String @default("{}") // JSON object stored as string
+
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([createdAt])
+}
+
+model TaskComment {
+  id     String @id @default(cuid())
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+}
+
+model TaskAttachment {
+  id     String @id @default(cuid())
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  fileName String
+  fileSize Int
+  fileType String
+  dataUrl  String // base64 data URL
+
+  uploadedAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model TaskHistory {
+  id     String @id @default(cuid())
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  field     String
+  oldValue  String
+  newValue  String
+  changedAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([changedAt])
 }

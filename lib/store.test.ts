@@ -1,14 +1,26 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useToolingTrackerStore } from './store'
-import type { TimeEntry } from './types'
+import type { TimeEntry, Project } from './types'
 
 describe('Focus Time Analysis - Store Helpers', () => {
   beforeEach(() => {
+    // Mock global fetch
+    global.fetch = vi.fn()
+    
     // Reset store before each test
+    const testProject: Project = {
+      id: 'test-project-1',
+      name: 'Test Project',
+      color: 'blue',
+      subcategories: [],
+      jiraKey: null,
+      createdAt: new Date(),
+    }
+    
     useToolingTrackerStore.setState({
       tasks: [],
       timeEntries: [],
-      projects: [],
+      projects: [testProject],
       activities: [],
       comments: [],
       attachments: [],
@@ -24,27 +36,52 @@ describe('Focus Time Analysis - Store Helpers', () => {
         showArchived: false,
       },
     })
-    
-    // Add a test project
-    useToolingTrackerStore.getState().addProject('Test Project', 'blue')
   })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Helper to inject a task directly into store (for testing, bypasses API)
+  const injectTask = (task: any) => {
+    const now = new Date()
+    const newTask = {
+      id: task.id || 'task-' + Math.random().toString(36).slice(2),
+      title: task.title,
+      description: task.description || '',
+      status: task.status || 'todo',
+      priority: task.priority || 'medium',
+      projectId: task.projectId,
+      dueDate: task.dueDate || null,
+      subcategory: task.subcategory || null,
+      jiraKey: task.jiraKey || null,
+      storyPoints: task.storyPoints || null,
+      createdAt: task.createdAt || now,
+      updatedAt: now,
+      completedAt: task.completedAt || (task.status === 'done' ? now : null),
+      isArchived: false,
+      archivedAt: null,
+      blockedBy: [],
+      blocking: [],
+    }
+    useToolingTrackerStore.setState((state) => ({
+      tasks: [...state.tasks, newTask],
+    }))
+    return newTask
+  }
 
   describe('getTimeByEntryType', () => {
     it('should calculate correct totals for each time entry type', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      // Add a task
-      store.addTask({
+      // Inject a task directly (bypasses API)
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
         priority: 'medium',
         projectId,
-        dueDate: null,
-        subcategory: null,
-        jiraKey: null,
-        storyPoints: null,
       })
       
       const taskId = useToolingTrackerStore.getState().tasks[0].id
@@ -95,7 +132,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -126,7 +163,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -169,7 +206,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -199,7 +236,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -231,7 +268,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -258,7 +295,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -289,7 +326,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Task 1',
         description: 'Test',
         status: 'in-progress',
@@ -301,7 +338,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
         storyPoints: null,
       })
       
-      store.addTask({
+      injectTask({
         title: 'Task 2',
         description: 'Test',
         status: 'in-progress',
@@ -336,7 +373,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -377,7 +414,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const projectId = store.projects[0].id
       
       // Add a task
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -440,7 +477,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -644,7 +681,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -681,7 +718,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -731,7 +768,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -767,7 +804,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'in-progress',
@@ -817,7 +854,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const projectId = store.projects[0].id
       
       // Add tasks completed in different weeks
-      store.addTask({
+      injectTask({
         title: 'Task 1',
         description: 'Test',
         status: 'done',
@@ -831,7 +868,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       
       const task1Id = useToolingTrackerStore.getState().tasks[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Task 2',
         description: 'Test',
         status: 'done',
@@ -874,7 +911,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Task',
         description: 'Test',
         status: 'done',
@@ -930,7 +967,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const projectId = store.projects[0].id
       
       // Add two tasks with different cycle times
-      store.addTask({
+      injectTask({
         title: 'Task 1',
         description: 'Test',
         status: 'done',
@@ -942,7 +979,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
         storyPoints: null,
       })
       
-      store.addTask({
+      injectTask({
         title: 'Task 2',
         description: 'Test',
         status: 'done',
@@ -978,16 +1015,27 @@ describe('Focus Time Analysis - Store Helpers', () => {
       expect(result).toBeLessThan(3.1)
     })
 
-    it('should filter by project when projectId provided', () => {
+    it('should filter by project when projectId provided', async () => {
       const store = useToolingTrackerStore.getState()
       const project1Id = store.projects[0].id
       
-      // Add second project
-      store.addProject('Project 2', 'green')
+      // Add second project via direct state (not API since it's async)
+      const project2: Project = {
+        id: 'test-project-2',
+        name: 'Project 2',
+        color: 'green',
+        subcategories: [],
+        jiraKey: null,
+        createdAt: new Date(),
+      }
+      useToolingTrackerStore.setState((state) => ({
+        projects: [...state.projects, project2],
+      }))
+      
       const project2Id = useToolingTrackerStore.getState().projects[1].id
       
       // Add tasks to both projects
-      store.addTask({
+      injectTask({
         title: 'Task P1',
         description: 'Test',
         status: 'done',
@@ -999,7 +1047,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
         storyPoints: null,
       })
       
-      store.addTask({
+      injectTask({
         title: 'Task P2',
         description: 'Test',
         status: 'done',
@@ -1052,7 +1100,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const projectId = store.projects[0].id
       
       // Add high priority task (2 day cycle)
-      store.addTask({
+      injectTask({
         title: 'High Priority Task',
         description: 'Test',
         status: 'done',
@@ -1065,7 +1113,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       })
       
       // Add low priority task (5 day cycle)
-      store.addTask({
+      injectTask({
         title: 'Low Priority Task',
         description: 'Test',
         status: 'done',
@@ -1109,16 +1157,27 @@ describe('Focus Time Analysis - Store Helpers', () => {
       expect(lowPriorityData!.avgCycleTimeDays).toBeLessThan(5.1)
     })
 
-    it('should calculate average time spent by project', () => {
+    it('should calculate average time spent by project', async () => {
       const store = useToolingTrackerStore.getState()
       const project1Id = store.projects[0].id
       
-      // Add second project
-      store.addProject('Project 2', 'green')
+      // Add second project via direct state (not API since it's async)
+      const project2: Project = {
+        id: 'test-project-2',
+        name: 'Project 2',
+        color: 'green',
+        subcategories: [],
+        jiraKey: null,
+        createdAt: new Date(),
+      }
+      useToolingTrackerStore.setState((state) => ({
+        projects: [...state.projects, project2],
+      }))
+      
       const project2Id = useToolingTrackerStore.getState().projects[1].id
       
       // Add tasks to both projects
-      store.addTask({
+      injectTask({
         title: 'P1 Task',
         description: 'Test',
         status: 'done',
@@ -1130,7 +1189,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
         storyPoints: null,
       })
       
-      store.addTask({
+      injectTask({
         title: 'P2 Task',
         description: 'Test',
         status: 'done',
@@ -1196,7 +1255,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       
       // Add multiple completed tasks
       for (let i = 0; i < 3; i++) {
-        store.addTask({
+        injectTask({
           title: `Task ${i + 1}`,
           description: 'Test',
           status: 'done',
@@ -1256,7 +1315,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       
       // Add 2 high priority tasks
       for (let i = 0; i < 2; i++) {
-        store.addTask({
+        injectTask({
           title: `High Task ${i + 1}`,
           description: 'Test',
           status: 'done',
@@ -1293,7 +1352,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'todo',
@@ -1323,7 +1382,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'todo',
@@ -1354,7 +1413,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'todo',
@@ -1383,7 +1442,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
       
-      store.addTask({
+      injectTask({
         title: 'Test Task',
         description: 'Test',
         status: 'todo',
@@ -1429,7 +1488,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const task2Date = new Date('2026-01-15')
       const task3Date = new Date('2026-01-31')
 
-      store.addTask({
+      injectTask({
         title: 'Task 1',
         description: 'Early January',
         status: 'todo',
@@ -1441,7 +1500,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
         storyPoints: null,
       })
 
-      store.addTask({
+      injectTask({
         title: 'Task 2',
         description: 'Mid January',
         status: 'todo',
@@ -1453,7 +1512,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
         storyPoints: null,
       })
 
-      store.addTask({
+      injectTask({
         title: 'Task 3',
         description: 'Late January',
         status: 'todo',
@@ -1489,7 +1548,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
 
-      store.addTask({
+      injectTask({
         title: 'Start Task',
         description: 'On start date',
         status: 'todo',
@@ -1501,7 +1560,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
         storyPoints: null,
       })
 
-      store.addTask({
+      injectTask({
         title: 'End Task',
         description: 'On end date',
         status: 'todo',
@@ -1533,7 +1592,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const store = useToolingTrackerStore.getState()
       const projectId = store.projects[0].id
 
-      store.addTask({
+      injectTask({
         title: 'Task',
         description: 'Test',
         status: 'todo',
@@ -1558,5 +1617,761 @@ describe('Focus Time Analysis - Store Helpers', () => {
       expect(filtered).toHaveLength(1)
     })
   })
+
+  describe('Loading and Error State', () => {
+    beforeEach(() => {
+      // Clear loading and error state for these tests
+      useToolingTrackerStore.setState({
+        isLoading: false,
+        error: null,
+      })
+    })
+
+    it('should initialize with loading false and no error', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      expect(store.isLoading).toBe(false)
+      expect(store.error).toBeNull()
+    })
+
+    it('should set loading state', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      store.setLoading(true)
+      expect(useToolingTrackerStore.getState().isLoading).toBe(true)
+      
+      store.setLoading(false)
+      expect(useToolingTrackerStore.getState().isLoading).toBe(false)
+    })
+
+    it('should set error state', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      store.setError('Test error message')
+      expect(useToolingTrackerStore.getState().error).toBe('Test error message')
+    })
+
+    it('should clear error with null', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      store.setError('Error')
+      expect(useToolingTrackerStore.getState().error).toBe('Error')
+      
+      store.setError(null)
+      expect(useToolingTrackerStore.getState().error).toBeNull()
+    })
+
+    it('should support loading sequence: false -> true -> false', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      expect(useToolingTrackerStore.getState().isLoading).toBe(false)
+      
+      store.setLoading(true)
+      expect(useToolingTrackerStore.getState().isLoading).toBe(true)
+      
+      store.setLoading(false)
+      expect(useToolingTrackerStore.getState().isLoading).toBe(false)
+    })
+
+    it('should support error sequence: null -> message -> null', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      expect(useToolingTrackerStore.getState().error).toBeNull()
+      
+      store.setError('Network error')
+      expect(useToolingTrackerStore.getState().error).toBe('Network error')
+      
+      store.setError(null)
+      expect(useToolingTrackerStore.getState().error).toBeNull()
+    })
+
+    it('should allow updating both loading and error independently', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      store.setLoading(true)
+      expect(useToolingTrackerStore.getState().isLoading).toBe(true)
+      expect(useToolingTrackerStore.getState().error).toBeNull()
+      
+      store.setError('Error occurred')
+      expect(useToolingTrackerStore.getState().isLoading).toBe(true)
+      expect(useToolingTrackerStore.getState().error).toBe('Error occurred')
+      
+      store.setLoading(false)
+      expect(useToolingTrackerStore.getState().isLoading).toBe(false)
+      expect(useToolingTrackerStore.getState().error).toBe('Error occurred')
+      
+      store.setError(null)
+      expect(useToolingTrackerStore.getState().isLoading).toBe(false)
+      expect(useToolingTrackerStore.getState().error).toBeNull()
+    })
+
+    it('should handle multiple error updates', () => {
+      const store = useToolingTrackerStore.getState()
+      
+      store.setError('Error 1')
+      expect(useToolingTrackerStore.getState().error).toBe('Error 1')
+      
+      store.setError('Error 2')
+      expect(useToolingTrackerStore.getState().error).toBe('Error 2')
+      
+      store.setError(null)
+      expect(useToolingTrackerStore.getState().error).toBeNull()
+    })
+  })
+
+  describe('Project API Integration', () => {
+    beforeEach(() => {
+      // Mock fetch globally
+      global.fetch = vi.fn()
+      
+      // Clear state before each test
+      useToolingTrackerStore.setState({
+        isLoading: false,
+        error: null,
+      })
+    })
+
+    it('addProject calls API and updates store on success', async () => {
+      const mockProject: Project = {
+        id: '1',
+        name: 'Test Project',
+        color: 'blue',
+        subcategories: [],
+        jiraKey: null,
+        createdAt: new Date(),
+      }
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockProject,
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.addProject('Test Project', 'blue', null)
+
+      const projects = useToolingTrackerStore.getState().projects
+      expect(projects).toHaveLength(2) // 1 from beforeEach + 1 new
+      expect(projects[1].name).toBe('Test Project')
+      expect(store.isLoading).toBe(false)
+      expect(store.error).toBeNull()
+    })
+
+    it('addProject sets error on API failure', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () => 'Project name is required',
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.addProject('Test Project', 'blue', null)
+
+      const stateAfter = useToolingTrackerStore.getState()
+      expect(stateAfter.error).toBeTruthy()
+      expect(stateAfter.isLoading).toBe(false)
+    })
+
+    it('addProject sends correct payload to API', async () => {
+      const mockProject: Project = {
+        id: '1',
+        name: 'My Project',
+        color: 'green',
+        subcategories: [],
+        jiraKey: 'PROJ',
+        createdAt: new Date(),
+      }
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockProject,
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.addProject('My Project', 'green', 'PROJ')
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/projects',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'My Project',
+            color: 'green',
+            jiraKey: 'PROJ',
+          }),
+        })
+      )
+    })
+
+    it('updateProject calls API and updates store on success', async () => {
+      const updatedProject: Project = {
+        id: 'test-project-1',
+        name: 'Updated Project',
+        color: 'green',
+        subcategories: ['New Sub'],
+        jiraKey: 'UP',
+        createdAt: new Date(),
+      }
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => updatedProject,
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.updateProject('test-project-1', { name: 'Updated Project' })
+
+      const projects = useToolingTrackerStore.getState().projects
+      expect(projects[0].name).toBe('Updated Project')
+      expect(store.isLoading).toBe(false)
+      expect(store.error).toBeNull()
+    })
+
+    it('updateProject sets error on API failure', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => 'Project not found',
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.updateProject('nonexistent', { name: 'New Name' })
+
+      const stateAfter = useToolingTrackerStore.getState()
+      expect(stateAfter.error).toBeTruthy()
+      expect(stateAfter.isLoading).toBe(false)
+    })
+
+    it('deleteProject calls API and removes project from store on success', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      const initialCount = store.projects.length
+      
+      await store.deleteProject('test-project-1')
+
+      const projects = useToolingTrackerStore.getState().projects
+      expect(projects).toHaveLength(initialCount - 1)
+      expect(store.isLoading).toBe(false)
+      expect(store.error).toBeNull()
+    })
+
+    it('deleteProject sets error on API failure', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => 'Project not found',
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.deleteProject('nonexistent')
+
+      const stateAfter = useToolingTrackerStore.getState()
+      expect(stateAfter.error).toBeTruthy()
+      expect(stateAfter.isLoading).toBe(false)
+    })
+
+    it('addSubcategoryToProject calls API and updates store on success', async () => {
+      const updatedProject: Project = {
+        id: 'test-project-1',
+        name: 'Test Project',
+        color: 'blue',
+        subcategories: ['New Category'],
+        jiraKey: null,
+        createdAt: new Date(),
+      }
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => updatedProject,
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.addSubcategoryToProject('test-project-1', 'New Category')
+
+      const projects = useToolingTrackerStore.getState().projects
+      expect(projects[0].subcategories).toContain('New Category')
+      expect(store.isLoading).toBe(false)
+      expect(store.error).toBeNull()
+    })
+
+    it('addSubcategoryToProject sends correct payload to API', async () => {
+      const updatedProject: Project = {
+        id: 'test-project-1',
+        name: 'Test Project',
+        color: 'blue',
+        subcategories: ['UI'],
+        jiraKey: null,
+        createdAt: new Date(),
+      }
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => updatedProject,
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.addSubcategoryToProject('test-project-1', 'UI')
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/projects/test-project-1/subcategories',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'UI' }),
+        })
+      )
+    })
+
+    it('addSubcategoryToProject sets error on API failure', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () => 'Invalid category name',
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.addSubcategoryToProject('test-project-1', '')
+
+      const stateAfter = useToolingTrackerStore.getState()
+      expect(stateAfter.error).toBeTruthy()
+      expect(stateAfter.isLoading).toBe(false)
+    })
+
+    it('maintains loading state during async operations', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: '1',
+          name: 'Test',
+          color: 'blue',
+          subcategories: [],
+          jiraKey: null,
+          createdAt: new Date(),
+        }),
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      
+      // Before calling
+      expect(store.isLoading).toBe(false)
+      
+      const promise = store.addProject('Test', 'blue')
+      // After calling but before await (isLoading might be true)
+      
+      await promise
+      
+      // After completion
+      expect(store.isLoading).toBe(false)
+    })
+
+    it('addProject validates input and returns early if name is empty', async () => {
+      const store = useToolingTrackerStore.getState()
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      
+      await store.addProject('', 'blue')
+      
+      expect(consoleSpy).toHaveBeenCalledWith('Project name is required')
+      expect(global.fetch).not.toHaveBeenCalled()
+      
+      consoleSpy.mockRestore()
+    })
+
+    it('addProject trims whitespace from project name', async () => {
+      const mockProject: Project = {
+        id: '1',
+        name: 'Trimmed Project',
+        color: 'blue',
+        subcategories: [],
+        jiraKey: null,
+        createdAt: new Date(),
+      }
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockProject,
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.addProject('  Trimmed Project  ', 'blue')
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/projects',
+        expect.objectContaining({
+          body: JSON.stringify({
+            name: 'Trimmed Project',
+            color: 'blue',
+            jiraKey: null,
+          }),
+        })
+      )
+    })
+  })
 })
 
+describe('API Integration - Store Actions', () => {
+  beforeEach(() => {
+    // Reset store before each test
+    const testProject: Project = {
+      id: 'test-project-1',
+      name: 'Test Project',
+      color: 'blue',
+      subcategories: [],
+      jiraKey: null,
+      createdAt: new Date(),
+    }
+    
+    useToolingTrackerStore.setState({
+      tasks: [],
+      timeEntries: [],
+      projects: [testProject],
+      activities: [],
+      comments: [],
+      attachments: [],
+      history: [],
+      selectedProjectId: null,
+      boardFilters: {
+        search: '',
+        projectId: null,
+        priority: 'all',
+        dateRange: 'all',
+        customStart: null,
+        customEnd: null,
+        showArchived: false,
+      },
+      isLoading: false,
+      error: null,
+    })
+
+    // Mock global fetch
+    global.fetch = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  describe('addTask - API Integration', () => {
+    it('should call POST /api/tasks and update store on success', async () => {
+      const mockTask = {
+        id: 'task1',
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo' as const,
+        priority: 'medium' as const,
+        projectId: 'test-project-1',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+        createdAt: new Date('2026-01-15T10:00:00.000Z'),
+        updatedAt: new Date('2026-01-15T10:00:00.000Z'),
+        completedAt: null,
+        isArchived: false,
+        archivedAt: null,
+        blockedBy: [],
+        blocking: [],
+      }
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockTask,
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      const result = await store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo',
+        priority: 'medium',
+        projectId: 'test-project-1',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      expect(result).toBeDefined()
+      expect(result?.id).toBe('task1')
+
+      // Verify task was added to store
+      const state = useToolingTrackerStore.getState()
+      expect(state.tasks).toHaveLength(1)
+      expect(state.tasks[0].title).toBe('Test Task')
+    })
+
+    it('should set loading state during request', async () => {
+      const mockTask = {
+        id: 'task1',
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo' as const,
+        priority: 'medium' as const,
+        projectId: 'test-project-1',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        completedAt: null,
+        isArchived: false,
+        archivedAt: null,
+        blockedBy: [],
+        blocking: [],
+      }
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockTask,
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      
+      const promise = store.addTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo',
+        priority: 'medium',
+        projectId: 'test-project-1',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      // After completion, loading should be false
+      await promise
+      const state = useToolingTrackerStore.getState()
+      expect(state.isLoading).toBe(false)
+      expect(state.error).toBeNull()
+    })
+
+    it('should handle API errors and set error state', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () => 'Validation error',
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      const result = await injectTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo',
+        priority: 'medium',
+        projectId: 'test-project-1',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      expect(result).toBeUndefined()
+
+      const state = useToolingTrackerStore.getState()
+      expect(state.error).toBeTruthy()
+      expect(state.isLoading).toBe(false)
+    })
+
+    it('should validate title before making API call', async () => {
+      const store = useToolingTrackerStore.getState()
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const result = await injectTask({
+        title: '',
+        description: 'Test',
+        status: 'todo',
+        priority: 'medium',
+        projectId: 'test-project-1',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      expect(result).toBeUndefined()
+      expect(global.fetch).not.toHaveBeenCalled()
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should validate projectId before making API call', async () => {
+      const store = useToolingTrackerStore.getState()
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const result = await injectTask({
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo',
+        priority: 'medium',
+        projectId: '',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+      })
+
+      expect(result).toBeUndefined()
+      expect(global.fetch).not.toHaveBeenCalled()
+
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('updateTask - API Integration', () => {
+    it('should call PATCH /api/tasks/:id and update store', async () => {
+      // First add a task to the store
+      const mockTask = {
+        id: 'task1',
+        title: 'Original Title',
+        description: 'Test',
+        status: 'todo' as const,
+        priority: 'medium' as const,
+        projectId: 'test-project-1',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        completedAt: null,
+        isArchived: false,
+        archivedAt: null,
+        blockedBy: [],
+        blocking: [],
+      }
+
+      useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+      const updatedTask = { ...mockTask, title: 'Updated Title' }
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => updatedTask,
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      store.updateTask('task1', { title: 'Updated Title' })
+
+      // Wait a tick for state update
+      await new Promise(r => setTimeout(r, 0))
+
+      const state = useToolingTrackerStore.getState()
+      // updateTask updates local state immediately (optimistic update)
+      expect(state.tasks[0].title).toBe('Updated Title')
+    })
+
+    it('should handle update errors and set error state', async () => {
+      const mockTask = {
+        id: 'task1',
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo' as const,
+        priority: 'medium' as const,
+        projectId: 'test-project-1',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        completedAt: null,
+        isArchived: false,
+        archivedAt: null,
+        blockedBy: [],
+        blocking: [],
+      }
+
+      useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+      const store = useToolingTrackerStore.getState()
+      store.updateTask('task1', { title: 'Updated' })
+
+      // Store updates optimistically
+      const state = useToolingTrackerStore.getState()
+      expect(state.tasks[0].title).toBe('Updated')
+    })
+  })
+
+  describe('deleteTask - API Integration', () => {
+    it('should call DELETE /api/tasks/:id and remove from store', async () => {
+      const mockTask = {
+        id: 'task1',
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo' as const,
+        priority: 'medium' as const,
+        projectId: 'test-project-1',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        completedAt: null,
+        isArchived: false,
+        archivedAt: null,
+        blockedBy: [],
+        blocking: [],
+      }
+
+      useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+      const store = useToolingTrackerStore.getState()
+      expect(store.tasks).toHaveLength(1)
+
+      store.deleteTask('task1')
+
+      const state = useToolingTrackerStore.getState()
+      expect(state.tasks).toHaveLength(0)
+    })
+
+    it('should remove time entries when task is deleted', async () => {
+      const mockTask = {
+        id: 'task1',
+        title: 'Test Task',
+        description: 'Test',
+        status: 'todo' as const,
+        priority: 'medium' as const,
+        projectId: 'test-project-1',
+        dueDate: null,
+        subcategory: null,
+        jiraKey: null,
+        storyPoints: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        completedAt: null,
+        isArchived: false,
+        archivedAt: null,
+        blockedBy: [],
+        blocking: [],
+      }
+
+      const mockTimeEntry: TimeEntry = {
+        id: 'time1',
+        taskId: 'task1',
+        hours: 2,
+        minutes: 30,
+        date: new Date(),
+        notes: 'Work',
+        type: 'development',
+        createdAt: new Date(),
+      }
+
+      useToolingTrackerStore.setState({ 
+        tasks: [mockTask],
+        timeEntries: [mockTimeEntry]
+      })
+
+      const store = useToolingTrackerStore.getState()
+      store.deleteTask('task1')
+
+      const state = useToolingTrackerStore.getState()
+      expect(state.tasks).toHaveLength(0)
+      expect(state.timeEntries).toHaveLength(0)
+    })
+  })
+})

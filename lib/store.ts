@@ -21,6 +21,7 @@ import type {
   ComparisonPeriod,
   ComparisonData
 } from "./types"
+import { apiClient, APIError } from "./api-utils"
 
 interface ToolingTrackerState {
   projects: Project[]
@@ -32,19 +33,21 @@ interface ToolingTrackerState {
   history: TaskHistory[]
   selectedProjectId: string | null
   boardFilters: BoardFilters
+  isLoading: boolean
+  error: string | null
 
   // Project actions
-  addProject: (name: string, color: ProjectColor, jiraKey?: string | null) => void
-  updateProject: (id: string, updates: Partial<Project>) => void
-  deleteProject: (id: string) => void
+  addProject: (name: string, color: ProjectColor, jiraKey?: string | null) => Promise<void>
+  updateProject: (id: string, updates: Partial<Project>) => Promise<void>
+  deleteProject: (id: string) => Promise<void>
   setSelectedProject: (id: string | null) => void
-  addSubcategoryToProject: (projectId: string, name: string) => void
+  addSubcategoryToProject: (projectId: string, name: string) => Promise<void>
 
   // Task actions
   addTask: (task: Omit<Task, "id" | "createdAt" | "updatedAt" | "completedAt" | "isArchived" | "archivedAt" | "blockedBy" | "blocking"> & {
     createdAt?: Date
     completedAt?: Date | null
-  }) => Task | undefined
+  }) => Promise<Task | undefined>
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
   moveTask: (id: string, status: TaskStatus) => void
@@ -116,6 +119,10 @@ interface ToolingTrackerState {
     timeEntries: Omit<TimeEntry, 'type'>[] 
   }) => void
   clearAllData: () => void
+  
+  // Loading and error state
+  setLoading: (loading: boolean) => void
+  setError: (error: string | null) => void
 }
 
 const generateId = () =>
@@ -145,105 +152,127 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       history: [],
       selectedProjectId: null,
       boardFilters: DEFAULT_BOARD_FILTERS,
+      isLoading: false,
+      error: null,
 
-      addProject: (name, color, jiraKey) => {
+      addProject: async (name, color, jiraKey) => {
         if (!name?.trim()) {
           console.error('Project name is required')
           return
         }
-        const normalizedKey = jiraKey && jiraKey.trim().length > 0 ? jiraKey.trim() : null
-        const newProject: Project = {
-          id: generateId(),
-          name: name.trim(),
-          color,
-          subcategories: [],
-          createdAt: new Date(),
-          jiraKey: normalizedKey,
+        
+        set({ isLoading: true, error: null })
+        
+        try {
+          const response = await apiClient.post<Project>('/api/projects', {
+            name: name.trim(),
+            color,
+            jiraKey: jiraKey || null,
+          })
+          
+          set((state) => ({ 
+            projects: [...state.projects, response],
+            isLoading: false 
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to create project'
+          set({ error: message, isLoading: false })
+          console.error('Failed to create project:', error)
         }
-        set((state) => ({ projects: [...state.projects, newProject] }))
       },
 
-      updateProject: (id, updates) => {
-        set((state) => ({
-          projects: state.projects.map((p) => (p.id === id ? { ...p, ...updates } : p)),
-        }))
+      updateProject: async (id, updates) => {
+        set({ isLoading: true, error: null })
+        
+        try {
+          const response = await apiClient.patch<Project>(`/api/projects/${id}`, updates)
+          
+          set((state) => ({
+            projects: state.projects.map((p) => (p.id === id ? response : p)),
+            isLoading: false
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to update project'
+          set({ error: message, isLoading: false })
+          console.error('Failed to update project:', error)
+        }
       },
 
-      deleteProject: (id) => {
-        set((state) => ({
-          projects: state.projects.filter((p) => p.id !== id),
-          tasks: state.tasks.filter((t) => t.projectId !== id),
-          timeEntries: state.timeEntries.filter((te) => {
-            const task = state.tasks.find((t) => t.id === te.taskId)
-            return task?.projectId !== id
-          }),
-        }))
+      deleteProject: async (id) => {
+        set({ isLoading: true, error: null })
+        
+        try {
+          await apiClient.delete<void>(`/api/projects/${id}`)
+          
+          set((state) => ({
+            projects: state.projects.filter((p) => p.id !== id),
+            tasks: state.tasks.filter((t) => t.projectId !== id),
+            timeEntries: state.timeEntries.filter((te) => {
+              const task = state.tasks.find((t) => t.id === te.taskId)
+              return task?.projectId !== id
+            }),
+            isLoading: false
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to delete project'
+          set({ error: message, isLoading: false })
+          console.error('Failed to delete project:', error)
+        }
       },
 
       setSelectedProject: (id) => set({ selectedProjectId: id }),
 
-      addSubcategoryToProject: (projectId, name) => {
-        set((state) => ({
-          projects: state.projects.map((project) => {
-            if (project.id !== projectId) return project
-            const exists = project.subcategories?.some((sub) => sub.toLowerCase() === name.toLowerCase())
-            if (exists) return project
-            const updatedSubs = [...(project.subcategories ?? []), name]
-            return { ...project, subcategories: updatedSubs }
-          }),
-        }))
+      addSubcategoryToProject: async (projectId, name) => {
+        set({ isLoading: true, error: null })
+        
+        try {
+          const response = await apiClient.post<Project>(
+            `/api/projects/${projectId}/subcategories`,
+            { name }
+          )
+          
+          set((state) => ({
+            projects: state.projects.map((p) => (p.id === projectId ? response : p)),
+            isLoading: false
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to add subcategory'
+          set({ error: message, isLoading: false })
+          console.error('Failed to add subcategory:', error)
+        }
       },
 
-      addTask: (task) => {
+      addTask: async (task) => {
         if (!task.title?.trim()) {
           console.error('Task title is required')
-          return
+          return undefined
         }
         if (!task.projectId) {
           console.error('Task projectId is required')
-          return
-        }
-        // Validate project exists
-        const projectExists = get().projects.some(p => p.id === task.projectId)
-        if (!projectExists) {
-          console.error('Project not found:', task.projectId)
-          return
-        }
-        const taskId = generateId()
-        const now = new Date()
-        const newTask: Task = {
-          ...task,
-          id: taskId,
-          title: task.title.trim(),
-          description: task.description?.trim() || '',
-          subcategory: task.subcategory?.trim() || null,
-          jiraKey: task.jiraKey?.trim() || null,
-          storyPoints: typeof task.storyPoints === "number" ? task.storyPoints : null,
-          createdAt: task.createdAt || now,
-          updatedAt: now,
-          completedAt: task.completedAt || (task.status === 'done' ? now : null),
-          isArchived: false,
-          archivedAt: null,
-          blockedBy: [],
-          blocking: [],
+          return undefined
         }
         
-        // Log activity
-        const activity = {
-          id: generateId(),
-          taskId,
-          type: 'task_created' as const,
-          description: `Task "${newTask.title}" created`,
-          metadata: { projectId: newTask.projectId, status: newTask.status },
-          createdAt: now,
+        set({ isLoading: true, error: null })
+        
+        try {
+          const response = await apiClient.post<Task>('/api/tasks', {
+            ...task,
+            title: task.title.trim(),
+            description: task.description?.trim() || '',
+          })
+          
+          set((state) => ({ 
+            tasks: [...state.tasks, response],
+            isLoading: false 
+          }))
+          
+          return response
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to create task'
+          set({ error: message, isLoading: false })
+          console.error('Failed to create task:', error)
+          return undefined
         }
-        
-        set((state) => ({ 
-          tasks: [...state.tasks, newTask],
-          activities: [...state.activities, activity]
-        }))
-        
-        return newTask
       },
 
       updateTask: (id, updates) => {
@@ -1373,6 +1402,15 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           boardFilters: DEFAULT_BOARD_FILTERS,
         })
       },
+
+      // Loading and error state actions
+      setLoading: (loading) => {
+        set({ isLoading: loading })
+      },
+
+      setError: (error) => {
+        set({ error })
+      },
     }),
     {
       name: "ToolingTracker-storage",
@@ -1408,6 +1446,12 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         
         if (state && !state.boardFilters) {
           state.boardFilters = DEFAULT_BOARD_FILTERS
+        }
+        
+        // Initialize loading/error state
+        if (state) {
+          if (state.isLoading === undefined) state.isLoading = false
+          if (state.error === undefined) state.error = null
         }
         return state
       },

@@ -6,3 +6,6 @@ prisma/dev.db
 pnpm-lock.yaml
 
 .github/copilot-instructions.md
+
+# Exclude plans and internal documentation
+plans/
