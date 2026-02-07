@@ -220,7 +220,6 @@ export interface UpdateCommentRequest {
 export interface CreateAttachmentRequest {
   taskId: string
   fileName: string
-  fileSize: number
   fileType: string
   dataUrl: string // base64 encoded
 }
