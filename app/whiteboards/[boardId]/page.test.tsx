@@ -19,8 +19,8 @@ vi.mock('next/navigation', () => ({
 
 // Mock the whiteboard editor component
 vi.mock('@/components/whiteboard-editor', () => ({
-  WhiteboardEditor: ({ boardId }: any) => (
-    <div data-testid="whiteboard-editor">Editor for {boardId}</div>
+  WhiteboardEditor: () => (
+    <div data-testid="whiteboard-editor">Editor loaded</div>
   ),
 }))
 

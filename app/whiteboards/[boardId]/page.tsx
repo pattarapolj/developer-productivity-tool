@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToolingTrackerStore } from '@/lib/store'
+import { useAutoSave } from '@/hooks/use-auto-save'
 import { WhiteboardEditor } from '@/components/whiteboard-editor'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function WhiteboardEdit({
   params,
@@ -22,6 +23,33 @@ export default function WhiteboardEdit({
     if (!mounted) return null
     return store.boards.find((b) => b.id === boardId) || null
   }, [mounted, boardId, store.boards])
+
+  // Create auto-save handler
+  const handleSave = useCallback(
+    async (serializedContent: string) => {
+      try {
+        await store.updateBoard(boardId, { content: serializedContent })
+      } catch (error) {
+        console.error('Failed to save board:', error)
+        throw error
+      }
+    },
+    [boardId, store]
+  )
+
+  // Use the auto-save hook
+  const { save: saveBoard, status: saveStatus, error: saveError } = useAutoSave(
+    handleSave,
+    2000 // 2 second debounce
+  )
+
+  // Handler for content changes from editor
+  const handleEditorChange = useCallback(
+    (newContent: string) => {
+      saveBoard(newContent)
+    },
+    [saveBoard]
+  )
 
   useEffect(() => {
     // Mark as mounted for hydration safety - use microtask
@@ -81,13 +109,37 @@ export default function WhiteboardEdit({
             )}
           </div>
         </div>
+
+        {/* Auto-Save Status Indicator */}
+        <div className="flex items-center gap-2">
+          {saveStatus === 'saving' && (
+            <div className="flex items-center gap-2 text-blue-400">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Saving...</span>
+            </div>
+          )}
+          {saveStatus === 'saved' && (
+            <div className="flex items-center gap-2 text-green-400">
+              <CheckCircle className="w-4 h-4" />
+              <span className="text-sm">All changes saved</span>
+            </div>
+          )}
+          {saveStatus === 'error' && (
+            <div className="flex items-center gap-2 text-red-400">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm">
+                {saveError?.message || 'Save failed'}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Editor Container */}
       <div className="flex-1 overflow-hidden">
         <WhiteboardEditor
-          boardId={boardId}
           initialContent={board.content || '{}'}
+          onChange={handleEditorChange}
         />
       </div>
     </div>

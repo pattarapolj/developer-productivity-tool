@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import { deserializeExcalidrawState } from '@/lib/whiteboard-utils'
+import { deserializeExcalidrawState, serializeExcalidrawState } from '@/lib/whiteboard-utils'
 
 // Dynamically import Excalidraw to avoid SSR issues
 const Excalidraw = dynamic(
@@ -22,15 +22,13 @@ const Excalidraw = dynamic(
 )
 
 interface WhiteboardEditorProps {
-  boardId: string // Used in Phase 5 for auto-save
   initialContent: string
   onChange?: (newContent: string) => void // Used in Phase 5 for auto-save
 }
 
 export function WhiteboardEditor({
-  // boardId reserved for Phase 5 auto-save
   initialContent,
-  // onChange reserved for Phase 5 auto-save
+  onChange,
 }: WhiteboardEditorProps) {
   const [mounted, setMounted] = useState(false)
 
@@ -43,6 +41,22 @@ export function WhiteboardEditor({
       return { elements: [], appState: {} }
     }
   }, [initialContent])
+
+  // Handler for Excalidraw changes - serializes and calls onChange prop
+  const handleExcalidrawChange = useCallback(
+    (elements: readonly unknown[], appState: unknown) => {
+      if (onChange) {
+        try {
+          // Cast to any for serialization compatibility with Excalidraw types
+          const serialized = serializeExcalidrawState(elements as any[], appState as any)
+          onChange(serialized)
+        } catch (error) {
+          console.error('Failed to serialize Excalidraw state:', error)
+        }
+      }
+    },
+    [onChange]
+  )
 
   useEffect(() => {
     // Mark as mounted for hydration safety - use microtask to avoid cascading renders
@@ -69,6 +83,7 @@ export function WhiteboardEditor({
           elements: (initialState.elements || []) as readonly any[],
           appState: (initialState.appState || {}) as any,
         }}
+        onChange={handleExcalidrawChange}
         theme="dark"
         renderTopRightUI={() => null}
       />
