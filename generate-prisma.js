@@ -1,11 +1,11 @@
 // Script to generate Prisma client
-const { execSync } = require('child_process');
+const { execSync } = require("child_process");
 
 try {
-  console.log('Generating Prisma client...');
-  execSync('npx prisma generate', { stdio: 'inherit', cwd: __dirname });
-  console.log('Prisma client generated successfully!');
+    console.log("Generating Prisma client...");
+    execSync("npx prisma generate", { stdio: "inherit", cwd: __dirname });
+    console.log("Prisma client generated successfully!");
 } catch (error) {
-  console.error('Failed to generate Prisma client:', error.message);
-  process.exit(1);
+    console.error("Failed to generate Prisma client:", error.message);
+    process.exit(1);
 }

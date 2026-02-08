@@ -39,6 +39,7 @@ describe('Sidebar Component', () => {
     const projectsLinks = screen.getAllByText('Projects')
     expect(projectsLinks.length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Calendar')).toBeInTheDocument()
+    expect(screen.getByText('Whiteboards')).toBeInTheDocument()
     expect(screen.getByText('Analytics')).toBeInTheDocument()
   })
 
@@ -173,6 +174,27 @@ describe('Sidebar Component', () => {
     const projectsLink = screen.getAllByText('Projects').find(el => el.closest('a'))
     expect(projectsLink?.closest('a')).toHaveAttribute('href', '/projects')
     expect(screen.getByText('Calendar').closest('a')).toHaveAttribute('href', '/calendar')
+    expect(screen.getByText('Whiteboards').closest('a')).toHaveAttribute('href', '/whiteboards')
     expect(screen.getByText('Analytics').closest('a')).toHaveAttribute('href', '/analytics')
+  })
+
+  it('should render whiteboards nav item', () => {
+    render(<Sidebar />)
+    expect(screen.getByText('Whiteboards')).toBeInTheDocument()
+  })
+
+  it('should have whiteboards nav item with correct href', () => {
+    render(<Sidebar />)
+    const whiteboadsLink = screen.getByText('Whiteboards').closest('a')
+    expect(whiteboadsLink).toHaveAttribute('href', '/whiteboards')
+  })
+
+  it('should have whiteboards nav item with PenTool icon', () => {
+    render(<Sidebar />)
+    const whiteboadsLink = screen.getByText('Whiteboards').closest('a')
+    // The icon should be an svg or have a specific data-testid
+    // Since lucide icons render as svg, we can check if the parent has svg children
+    const svg = whiteboadsLink?.querySelector('svg')
+    expect(svg).toBeInTheDocument()
   })
 })
