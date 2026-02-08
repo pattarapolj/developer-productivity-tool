@@ -4175,4 +4175,399 @@ describe('API Integration - Store Actions', () => {
       })
     })
   })
+
+  describe('Persistence Configuration', () => {
+    beforeEach(() => {
+      // Clear localStorage before each test
+      localStorage.clear()
+      // Reset store
+      const testProject: Project = {
+        id: 'test-project-persistence',
+        name: 'Persistence Test Project',
+        color: 'blue',
+        subcategories: [],
+        jiraKey: null,
+        createdAt: new Date(),
+      }
+      useToolingTrackerStore.setState({
+        tasks: [],
+        timeEntries: [],
+        projects: [testProject],
+        activities: [],
+        comments: [],
+        attachments: [],
+        history: [],
+        selectedProjectId: null,
+        boardFilters: {
+          search: '',
+          projectId: null,
+          priority: 'all',
+          dateRange: 'all',
+          customStart: null,
+          customEnd: null,
+          showArchived: false,
+        },
+        isLoading: false,
+        error: null,
+      })
+    })
+
+    afterEach(() => {
+      localStorage.clear()
+    })
+
+    describe('Data Fields NOT Persisted to localStorage', () => {
+      it('should NOT persist projects to localStorage', () => {
+        useToolingTrackerStore.setState({
+          projects: [
+            {
+              id: 'proj-1',
+              name: 'Test Project',
+              color: 'blue',
+              subcategories: [],
+              jiraKey: null,
+              createdAt: new Date(),
+            },
+          ],
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        expect(stored).not.toBeNull()
+        
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.projects).toBeUndefined()
+      })
+
+      it('should NOT persist tasks to localStorage', () => {
+        useToolingTrackerStore.setState({
+          tasks: [
+            {
+              id: 'task-1',
+              title: 'Test Task',
+              description: 'Test Description',
+              status: 'todo',
+              priority: 'high',
+              projectId: 'proj-1',
+              dueDate: null,
+              subcategory: null,
+              jiraKey: null,
+              storyPoints: null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              completedAt: null,
+              isArchived: false,
+              archivedAt: null,
+              blockedBy: [],
+              blocking: [],
+            },
+          ],
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        expect(stored).not.toBeNull()
+        
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.tasks).toBeUndefined()
+      })
+
+      it('should NOT persist timeEntries to localStorage', () => {
+        useToolingTrackerStore.setState({
+          timeEntries: [
+            {
+              id: 'time-1',
+              taskId: 'task-1',
+              hours: 2,
+              minutes: 30,
+              type: 'development',
+              createdAt: new Date(),
+            },
+          ],
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        expect(stored).not.toBeNull()
+        
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.timeEntries).toBeUndefined()
+      })
+
+      it('should NOT persist activities to localStorage', () => {
+        useToolingTrackerStore.setState({
+          activities: [
+            {
+              id: 'act-1',
+              type: 'task_created',
+              taskId: 'task-1',
+              description: 'Task created',
+              createdAt: new Date(),
+              metadata: {},
+            },
+          ],
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        expect(stored).not.toBeNull()
+        
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.activities).toBeUndefined()
+      })
+
+      it('should NOT persist comments to localStorage', () => {
+        useToolingTrackerStore.setState({
+          comments: [
+            {
+              id: 'comment-1',
+              taskId: 'task-1',
+              content: 'Test comment',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ],
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        expect(stored).not.toBeNull()
+        
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.comments).toBeUndefined()
+      })
+
+      it('should NOT persist attachments to localStorage', () => {
+        useToolingTrackerStore.setState({
+          attachments: [
+            {
+              id: 'attach-1',
+              taskId: 'task-1',
+              fileName: 'test.pdf',
+              fileSize: 1024,
+              fileType: 'application/pdf',
+              uploadedAt: new Date(),
+            },
+          ],
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        expect(stored).not.toBeNull()
+        
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.attachments).toBeUndefined()
+      })
+
+      it('should NOT persist history to localStorage', () => {
+        useToolingTrackerStore.setState({
+          history: [
+            {
+              id: 'hist-1',
+              taskId: 'task-1',
+              field: 'status',
+              oldValue: 'todo',
+              newValue: 'in-progress',
+              changedAt: new Date(),
+            },
+          ],
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        expect(stored).not.toBeNull()
+        
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.history).toBeUndefined()
+      })
+    })
+
+    describe('UI State Persisted to localStorage', () => {
+      it('should persist selectedProjectId to localStorage', () => {
+        useToolingTrackerStore.setState({
+          selectedProjectId: 'test-project-persistence',
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        expect(stored).not.toBeNull()
+        
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.selectedProjectId).toBe('test-project-persistence')
+      })
+
+      it('should persist boardFilters to localStorage', () => {
+        useToolingTrackerStore.setState({
+          boardFilters: {
+            search: 'testing',
+            projectId: 'proj-1',
+            priority: 'high',
+            dateRange: 'month',
+            customStart: null,
+            customEnd: null,
+            showArchived: true,
+          },
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        expect(stored).not.toBeNull()
+        
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.boardFilters.search).toBe('testing')
+        expect(parsed.state.boardFilters.projectId).toBe('proj-1')
+        expect(parsed.state.boardFilters.priority).toBe('high')
+        expect(parsed.state.boardFilters.dateRange).toBe('month')
+        expect(parsed.state.boardFilters.showArchived).toBe(true)
+      })
+
+      it('should persist all boardFilters properties individually', () => {
+        const customStart = new Date('2026-01-01')
+        const customEnd = new Date('2026-01-31')
+        useToolingTrackerStore.setState({
+          boardFilters: {
+            search: 'search text',
+            projectId: 'proj-2',
+            priority: 'low',
+            dateRange: 'custom',
+            customStart,
+            customEnd,
+            showArchived: false,
+          },
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        const parsed = JSON.parse(stored!)
+        
+        expect(parsed.state.boardFilters.search).toBe('search text')
+        expect(parsed.state.boardFilters.projectId).toBe('proj-2')
+        expect(parsed.state.boardFilters.priority).toBe('low')
+        expect(parsed.state.boardFilters.dateRange).toBe('custom')
+        expect(parsed.state.boardFilters.showArchived).toBe(false)
+      })
+    })
+
+    describe('Loading and Error State NOT Persisted', () => {
+      it('should NOT persist isLoading to localStorage', () => {
+        useToolingTrackerStore.setState({
+          isLoading: true,
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.isLoading).toBeUndefined()
+      })
+
+      it('should NOT persist error to localStorage', () => {
+        useToolingTrackerStore.setState({
+          error: 'Some error occurred',
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        const parsed = JSON.parse(stored!)
+        expect(parsed.state.error).toBeUndefined()
+      })
+    })
+
+    describe('localStorage Structure', () => {
+      it('should only persist state with selectedProjectId and boardFilters', () => {
+        useToolingTrackerStore.setState({
+          selectedProjectId: 'test-proj',
+          boardFilters: {
+            search: 'test',
+            projectId: null,
+            priority: 'all',
+            dateRange: 'all',
+            customStart: null,
+            customEnd: null,
+            showArchived: false,
+          },
+          projects: [
+            {
+              id: 'test-proj',
+              name: 'Test',
+              color: 'blue',
+              subcategories: [],
+              jiraKey: null,
+              createdAt: new Date(),
+            },
+          ],
+          tasks: [
+            {
+              id: 'task-1',
+              title: 'Task',
+              description: '',
+              status: 'todo',
+              priority: 'medium',
+              projectId: 'test-proj',
+              dueDate: null,
+              subcategory: null,
+              jiraKey: null,
+              storyPoints: null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              completedAt: null,
+              isArchived: false,
+              archivedAt: null,
+              blockedBy: [],
+              blocking: [],
+            },
+          ],
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        const parsed = JSON.parse(stored!)
+        
+        // Only these should be persisted
+        expect(parsed.state).toHaveProperty('selectedProjectId')
+        expect(parsed.state).toHaveProperty('boardFilters')
+        
+        // These should NOT be
+        expect(parsed.state).not.toHaveProperty('projects')
+        expect(parsed.state).not.toHaveProperty('tasks')
+        expect(parsed.state).not.toHaveProperty('timeEntries')
+        expect(parsed.state).not.toHaveProperty('activities')
+        expect(parsed.state).not.toHaveProperty('comments')
+        expect(parsed.state).not.toHaveProperty('attachments')
+        expect(parsed.state).not.toHaveProperty('history')
+      })
+
+      it('should maintain proper localStorage format with version', () => {
+        useToolingTrackerStore.setState({
+          selectedProjectId: 'proj-1',
+        })
+
+        const stored = localStorage.getItem('ToolingTracker-storage')
+        expect(stored).not.toBeNull()
+        
+        const parsed = JSON.parse(stored!)
+        expect(parsed).toHaveProperty('state')
+        expect(parsed.state).toHaveProperty('selectedProjectId')
+        expect(parsed.state).toHaveProperty('boardFilters')
+      })
+    })
+
+    describe('UI State Filter Updates', () => {
+      it('should persist gradual filter state changes', () => {
+        const store = useToolingTrackerStore.getState()
+        
+        // Change multiple filter properties
+        store.setBoardFilters({ search: 'filter1' })
+        let stored = localStorage.getItem('ToolingTracker-storage')
+        let parsed = JSON.parse(stored!)
+        expect(parsed.state.boardFilters.search).toBe('filter1')
+        
+        store.setBoardFilters({ priority: 'high' })
+        stored = localStorage.getItem('ToolingTracker-storage')
+        parsed = JSON.parse(stored!)
+        expect(parsed.state.boardFilters.priority).toBe('high')
+        expect(parsed.state.boardFilters.search).toBe('filter1') // Previous value maintained
+      })
+
+      it('should persist selected project changes', () => {
+        const store = useToolingTrackerStore.getState()
+        
+        store.setSelectedProject('new-proj-1')
+        let stored = localStorage.getItem('ToolingTracker-storage')
+        let parsed = JSON.parse(stored!)
+        expect(parsed.state.selectedProjectId).toBe('new-proj-1')
+        
+        store.setSelectedProject(null)
+        stored = localStorage.getItem('ToolingTracker-storage')
+        parsed = JSON.parse(stored!)
+        expect(parsed.state.selectedProjectId).toBeNull()
+      })
+    })
+  })
 })

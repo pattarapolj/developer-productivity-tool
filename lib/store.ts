@@ -1561,48 +1561,6 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         selectedProjectId: state.selectedProjectId,
         boardFilters: state.boardFilters,
       }),
-      // Migrate old data to include new fields
-      migrate: (persistedState: unknown) => {
-        const state = persistedState as ToolingTrackerState
-        
-        // Migrate tasks
-        if (state && state.tasks) {
-          state.tasks = state.tasks.map((task) => ({
-            ...task,
-            isArchived: task.isArchived ?? false,
-            archivedAt: task.archivedAt ?? null,
-            completedAt: task.completedAt ?? (task.status === 'done' ? task.updatedAt : null),
-            blockedBy: task.blockedBy ?? [],
-            blocking: task.blocking ?? [],
-          }))
-        }
-        
-        // Migrate time entries
-        if (state && state.timeEntries) {
-          state.timeEntries = state.timeEntries.map((entry: any) => ({
-            ...entry,
-            type: entry.type ?? 'development',
-          }))
-        }
-        
-        // Initialize new arrays if not present
-        if (!state.activities) state.activities = []
-        if (!state.comments) state.comments = []
-        if (!state.attachments) state.attachments = []
-        if (!state.history) state.history = []
-        
-        if (state && !state.boardFilters) {
-          state.boardFilters = DEFAULT_BOARD_FILTERS
-        }
-        
-        // Initialize loading/error state
-        if (state) {
-          if (state.isLoading === undefined) state.isLoading = false
-          if (state.error === undefined) state.error = null
-        }
-        return state
-      },
-      version: 1,
       // Handle localStorage quota errors
       onRehydrateStorage: () => (state, error) => {
         if (error) {
