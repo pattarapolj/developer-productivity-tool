@@ -22,13 +22,13 @@ export class APIError extends Error {
 }
 
 /**
- * Transform ISO date string from database to Date object for client
- * @param isoString - ISO date string from Prisma (e.g., "2026-01-15T10:30:00.000Z")
+ * Transform ISO date string or Date object from database to Date object for client
+ * @param value - ISO date string or Date object from Prisma
  * @returns Date object or null if input is null/undefined
  */
-export const transformDateFromDB = (isoString: string | null | undefined): Date | null => {
-  if (!isoString) return null
-  return new Date(isoString)
+export const transformDateFromDB = (value: string | Date | null | undefined): Date | null => {
+  if (!value) return null
+  return value instanceof Date ? value : new Date(value)
 }
 
 /**
@@ -152,16 +152,20 @@ export const apiClient = {
   /**
    * DELETE request
    * @param url - API endpoint URL
-   * @returns Parsed JSON response
+   * @returns Parsed JSON response or null for 204 No Content
    * @throws APIError if response is not ok
    */
-  async delete<T>(url: string): Promise<T> {
+  async delete<T>(url: string): Promise<T | null> {
     const response = await fetch(url, {
       method: 'DELETE',
     })
     if (!response.ok) {
       const text = await response.text()
       throw new APIError(response.status, text)
+    }
+    // Handle 204 No Content - no body to parse
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return null
     }
     return response.json() as Promise<T>
   },

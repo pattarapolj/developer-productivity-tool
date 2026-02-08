@@ -3,10 +3,14 @@ import { prisma } from '@/lib/db'
 import { transformPrismaTimeEntryToClient } from '@/lib/api-types'
 import type { UpdateTimeEntryRequest } from '@/lib/api-types'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     const entry = await prisma.timeEntry.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!entry) {
@@ -26,13 +30,17 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     const body: UpdateTimeEntryRequest = await request.json()
 
     // Verify entry exists
     const existingEntry = await prisma.timeEntry.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingEntry) {
@@ -51,7 +59,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (body.type !== undefined) updateData.type = body.type
 
     const entry = await prisma.timeEntry.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     })
 
@@ -81,11 +89,15 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     // Verify entry exists
     const entry = await prisma.timeEntry.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!entry) {
@@ -96,7 +108,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     await prisma.timeEntry.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     // Fetch task to get projectId for Activity

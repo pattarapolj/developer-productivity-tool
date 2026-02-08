@@ -15,7 +15,24 @@ model Project {
   subcategories String     @default("[]") // JSON array stored as string
   jiraKey       String?
   tasks         Task[]
+  boards        Board[]
   activities    Activity[]
+}
+
+model Board {
+  id            String   @id @default(cuid())
+  name          String
+  thumbnailPath String?
+  content       String   @default("{}") // JSON blob of Excalidraw state
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isArchived    Boolean  @default(false)
+
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId String?
+
+  @@index([projectId])
+  @@index([isArchived])
 }
 
 model Task {

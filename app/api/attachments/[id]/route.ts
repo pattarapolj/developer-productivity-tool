@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { transformPrismaAttachmentToClient } from '@/lib/api-types'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     const attachment = await (prisma as any).taskAttachment.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!attachment) {
@@ -25,11 +29,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // Verify attachment exists
+    const { id } = await params
     const attachment = await (prisma as any).taskAttachment.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!attachment) {
@@ -40,7 +48,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     await (prisma as any).taskAttachment.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     // Auto-generate Activity record
@@ -49,7 +57,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         taskId: attachment.taskId,
         type: 'attachment_deleted',
         description: `Attachment deleted: ${attachment.fileName}`,
-        metadata: JSON.stringify({ attachmentId: params.id, fileName: attachment.fileName }),
+        metadata: JSON.stringify({ attachmentId: id, fileName: attachment.fileName }),
       },
     })
 

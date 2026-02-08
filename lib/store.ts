@@ -19,7 +19,8 @@ import type {
   TaskEfficiencyMetrics,
   HistoryEntry,
   ComparisonPeriod,
-  ComparisonData
+  ComparisonData,
+  Board
 } from "./types"
 import { apiClient, APIError } from "./api-utils"
 
@@ -31,6 +32,7 @@ interface ToolingTrackerState {
   comments: TaskComment[]
   attachments: TaskAttachment[]
   history: TaskHistory[]
+  boards: Board[]
   selectedProjectId: string | null
   boardFilters: BoardFilters
   isLoading: boolean
@@ -65,6 +67,13 @@ interface ToolingTrackerState {
   // Board filter actions
   setBoardFilters: (filters: Partial<BoardFilters>) => void
   resetBoardFilters: () => void
+
+  // Whiteboard/Canvas board actions (Phase 2)
+  addBoard: (board: Omit<Board, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Board | undefined>
+  updateBoard: (id: string, updates: Partial<Board>) => Promise<void>
+  deleteBoard: (id: string) => Promise<void>
+  archiveBoard: (id: string) => Promise<void>
+  getBoardsForProject: (projectId: string) => Board[]
 
   // Time entry actions
   addTimeEntry: (entry: Omit<TimeEntry, "id" | "createdAt">) => Promise<void>
@@ -153,6 +162,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       comments: [],
       attachments: [],
       history: [],
+      boards: [],
       selectedProjectId: null,
       boardFilters: DEFAULT_BOARD_FILTERS,
       isLoading: false,
@@ -169,12 +179,13 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             apiClient.get<TaskComment[]>('/api/comments'),
             apiClient.get<TaskAttachment[]>('/api/attachments'),
             apiClient.get<Activity[]>('/api/activities'),
+            apiClient.get<Board[]>('/api/boards'),
             // NOTE: history is NOT loaded from API - it's generated from activity logs
             // If history should be persisted separately, implement /api/history endpoint
           ])
 
           // Extract successful results - allow partial hydration if some endpoints fail
-          const [projectsResult, tasksResult, timeEntriesResult, commentsResult, attachmentsResult, activitiesResult] = results
+          const [projectsResult, tasksResult, timeEntriesResult, commentsResult, attachmentsResult, activitiesResult, boardsResult] = results
 
           const newState: Partial<ToolingTrackerState> = {
             isLoading: false,
@@ -199,6 +210,9 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           if (activitiesResult.status === 'fulfilled') {
             newState.activities = activitiesResult.value
           }
+          if (boardsResult.status === 'fulfilled') {
+            newState.boards = boardsResult.value
+          }
 
           // Set error if ANY endpoint failed
           const failedResults = results.filter(r => r.status === 'rejected')
@@ -212,6 +226,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
                   '/api/comments',
                   '/api/attachments',
                   '/api/activities',
+                  '/api/boards',
                 ]
                 const endpoint = endpoints[results.indexOf(r)]
                 return `${endpoint} failed`
@@ -313,6 +328,82 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           set({ error: message, isLoading: false })
           console.error('Failed to add subcategory:', error)
         }
+      },
+
+      // Whiteboard/Canvas Board Actions (Phase 2)
+      addBoard: async (boardData) => {
+        set({ isLoading: true, error: null })
+        
+        try {
+          const response = await apiClient.post<Board>('/api/boards', boardData)
+          
+          set((state) => ({
+            boards: [...state.boards, response],
+            isLoading: false
+          }))
+          
+          return response
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to create board'
+          set({ error: message, isLoading: false })
+          console.error('Failed to create board:', error)
+          return undefined
+        }
+      },
+
+      updateBoard: async (id, updates) => {
+        set({ isLoading: true, error: null })
+        
+        try {
+          const response = await apiClient.patch<Board>(`/api/boards/${id}`, updates)
+          
+          set((state) => ({
+            boards: state.boards.map((b) => (b.id === id ? response : b)),
+            isLoading: false
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to update board'
+          set({ error: message, isLoading: false })
+          console.error('Failed to update board:', error)
+        }
+      },
+
+      deleteBoard: async (id) => {
+        set({ isLoading: true, error: null })
+        
+        try {
+          await apiClient.delete<void>(`/api/boards/${id}`)
+          
+          set((state) => ({
+            boards: state.boards.filter((b) => b.id !== id),
+            isLoading: false
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to delete board'
+          set({ error: message, isLoading: false })
+          console.error('Failed to delete board:', error)
+        }
+      },
+
+      archiveBoard: async (id) => {
+        set({ isLoading: true, error: null })
+        
+        try {
+          const response = await apiClient.patch<Board>(`/api/boards/${id}`, { isArchived: true })
+          
+          set((state) => ({
+            boards: state.boards.map((b) => (b.id === id ? response : b)),
+            isLoading: false
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to archive board'
+          set({ error: message, isLoading: false })
+          console.error('Failed to archive board:', error)
+        }
+      },
+
+      getBoardsForProject: (projectId) => {
+        return get().boards.filter((b) => b.projectId === projectId && !b.isArchived)
       },
 
       addTask: async (task) => {
@@ -1555,12 +1646,30 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
     }),
     {
       name: "ToolingTracker-storage",
+      version: 1, // Increment this when state structure changes
       // Only persist UI state to localStorage, not data from database
       // This prevents race conditions where stale UI state overwrites fresh API data
       partialize: (state) => ({
         selectedProjectId: state.selectedProjectId,
         boardFilters: state.boardFilters,
       }),
+      // Migration function to handle state structure changes
+      migrate: (persistedState: any, version: number) => {
+        // If no version, it's old state - return default structure
+        if (version === 0 || !persistedState) {
+          return {
+            selectedProjectId: null,
+            boardFilters: DEFAULT_BOARD_FILTERS,
+          }
+        }
+        
+        // Ensure boardFilters has all required fields
+        if (persistedState && !persistedState.boardFilters) {
+          persistedState.boardFilters = DEFAULT_BOARD_FILTERS
+        }
+        
+        return persistedState
+      },
       // Handle localStorage quota errors
       onRehydrateStorage: () => (state, error) => {
         if (error) {

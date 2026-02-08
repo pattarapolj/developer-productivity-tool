@@ -5,10 +5,10 @@ import type { UpdateTaskRequest } from '@/lib/api-types'
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     const task = await prisma.task.findUnique({
       where: { id }
@@ -33,10 +33,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     const body: UpdateTaskRequest = await request.json()
 
     // Fetch existing task to compare changes
@@ -121,10 +121,10 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     // Check if task exists first
     const existingTask = await prisma.task.findUnique({

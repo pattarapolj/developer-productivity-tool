@@ -12,6 +12,17 @@ export interface Project {
   jiraKey: string | null
 }
 
+export interface Board {
+  id: string
+  name: string
+  projectId: string | null
+  thumbnailPath: string | null
+  content: string
+  createdAt: Date
+  updatedAt: Date
+  isArchived: boolean
+}
+
 export interface Task {
   id: string
   title: string
