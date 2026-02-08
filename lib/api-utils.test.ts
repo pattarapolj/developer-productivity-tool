@@ -393,12 +393,29 @@ describe('api-utils - API Client', () => {
       ;(global.fetch as any).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
+        status: 200,
+        headers: new Headers({ 'content-length': '18' }),
       })
 
       const result = await apiClient.delete('/api/projects/proj-1')
 
       expect(result).toEqual(mockResponse)
       expect(global.fetch).toHaveBeenCalledWith('/api/projects/proj-1', {
+        method: 'DELETE',
+      })
+    })
+
+    it('should return null on 204 No Content', async () => {
+      ;(global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        headers: new Headers({ 'content-length': '0' }),
+      })
+
+      const result = await apiClient.delete('/api/boards/board-123')
+
+      expect(result).toBeNull()
+      expect(global.fetch).toHaveBeenCalledWith('/api/boards/board-123', {
         method: 'DELETE',
       })
     })

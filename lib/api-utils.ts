@@ -152,16 +152,20 @@ export const apiClient = {
   /**
    * DELETE request
    * @param url - API endpoint URL
-   * @returns Parsed JSON response
+   * @returns Parsed JSON response or null for 204 No Content
    * @throws APIError if response is not ok
    */
-  async delete<T>(url: string): Promise<T> {
+  async delete<T>(url: string): Promise<T | null> {
     const response = await fetch(url, {
       method: 'DELETE',
     })
     if (!response.ok) {
       const text = await response.text()
       throw new APIError(response.status, text)
+    }
+    // Handle 204 No Content - no body to parse
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return null
     }
     return response.json() as Promise<T>
   },

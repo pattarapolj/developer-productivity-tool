@@ -1,22 +1,24 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { use, useEffect, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToolingTrackerStore } from '@/lib/store'
 import { useAutoSave } from '@/hooks/use-auto-save'
 import { WhiteboardEditor } from '@/components/whiteboard-editor'
+import { PresentationMode } from '@/components/presentation-mode'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function WhiteboardEdit({
   params,
 }: {
-  params: { boardId: string }
+  params: Promise<{ boardId: string }>
 }) {
   const router = useRouter()
-  const { boardId } = params
+  const { boardId } = use(params)
   const store = useToolingTrackerStore()
   const [mounted, setMounted] = useState(false)
+  const [isPresenting, setIsPresenting] = useState(false)
 
   // Derive board from store using useMemo
   const board = useMemo(() => {
@@ -87,61 +89,78 @@ export default function WhiteboardEdit({
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-900">
-      {/* Header */}
-      <div className="border-b border-slate-700 bg-slate-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/whiteboards')}
-            className="text-slate-400 hover:text-white"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-white">{board.name}</h1>
-            {board.projectId && (
-              <p className="text-xs text-slate-400">
-                Project: {board.projectId}
-              </p>
-            )}
+    <>
+      {/* Presentation Mode Overlay */}
+      <PresentationMode
+        isPresenting={isPresenting}
+        onExit={() => setIsPresenting(false)}
+        boardContent={board?.content || '{}'}
+      />
+
+      {/* Normal Editor View */}
+      {!isPresenting && (
+        <div className="w-full h-full flex flex-col bg-slate-900">
+          {/* Header */}
+          <div className="border-b border-slate-700 bg-slate-800 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/whiteboards')}
+                className="text-slate-400 hover:text-white"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+              <div>
+                <h1 className="text-xl font-bold text-white" data-testid="board-title">
+                  {board.name}
+                </h1>
+                {board.projectId && (
+                  <p className="text-xs text-slate-400">
+                    Project: {board.projectId}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Auto-Save Status Indicator */}
+            <div className="flex items-center gap-2">
+              {saveStatus === 'saving' && (
+                <div className="flex items-center gap-2 text-blue-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Saving...</span>
+                </div>
+              )}
+              {saveStatus === 'saved' && (
+                <div className="flex items-center gap-2 text-green-400">
+                  <CheckCircle className="w-4 h-4" />
+                  <span className="text-sm">All changes saved</span>
+                </div>
+              )}
+              {saveStatus === 'error' && (
+                <div className="flex items-center gap-2 text-red-400">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm">
+                    {saveError?.message || 'Save failed'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Editor Container */}
+          <div className="flex-1 overflow-hidden">
+            <WhiteboardEditor
+              initialContent={board.content || '{}'}
+              onChange={handleEditorChange}
+              boardName={board.name}
+              showToolbar={true}
+              onPresentationModeToggle={(isPresenting) => setIsPresenting(isPresenting)}
+            />
           </div>
         </div>
-
-        {/* Auto-Save Status Indicator */}
-        <div className="flex items-center gap-2">
-          {saveStatus === 'saving' && (
-            <div className="flex items-center gap-2 text-blue-400">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">Saving...</span>
-            </div>
-          )}
-          {saveStatus === 'saved' && (
-            <div className="flex items-center gap-2 text-green-400">
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-sm">All changes saved</span>
-            </div>
-          )}
-          {saveStatus === 'error' && (
-            <div className="flex items-center gap-2 text-red-400">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">
-                {saveError?.message || 'Save failed'}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Editor Container */}
-      <div className="flex-1 overflow-hidden">
-        <WhiteboardEditor
-          initialContent={board.content || '{}'}
-          onChange={handleEditorChange}
-        />
-      </div>
-    </div>
+      )}
+    </>
   )
 }

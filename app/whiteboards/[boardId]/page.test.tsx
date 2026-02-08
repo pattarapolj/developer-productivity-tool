@@ -2,6 +2,21 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import WhiteboardEdit from './page'
 import { useToolingTrackerStore } from '@/lib/store'
+import { use } from 'react'
+
+// Mock React.use
+vi.mock('react', async () => {
+  const actual = await vi.importActual('react')
+  return {
+    ...actual,
+    use: vi.fn((promise: any) => {
+      if (promise && typeof promise.then === 'function') {
+        throw new Error('use() cannot be called in tests with real promises')
+      }
+      return promise || { boardId: 'board-123' }
+    }),
+  }
+})
 
 // Mock the store
 vi.mock('@/lib/store')
@@ -12,9 +27,6 @@ vi.mock('next/navigation', () => ({
     push: vi.fn(),
     replace: vi.fn(),
   }),
-  useParams: () => ({
-    boardId: 'board-123',
-  }),
 }))
 
 // Mock the whiteboard editor component
@@ -22,6 +34,20 @@ vi.mock('@/components/whiteboard-editor', () => ({
   WhiteboardEditor: () => (
     <div data-testid="whiteboard-editor">Editor loaded</div>
   ),
+}))
+
+// Mock the presentation mode component
+vi.mock('@/components/presentation-mode', () => ({
+  PresentationMode: () => null,
+}))
+
+// Mock the auto-save hook
+vi.mock('@/hooks/use-auto-save', () => ({
+  useAutoSave: () => ({
+    save: vi.fn(),
+    status: 'idle',
+    error: null,
+  }),
 }))
 
 describe('Whiteboard Editor Page', () => {
