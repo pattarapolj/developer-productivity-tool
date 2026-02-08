@@ -6,6 +6,7 @@
 
 import type {
   Project,
+  Board,
   Task,
   TimeEntry,
   TaskComment,
@@ -13,7 +14,7 @@ import type {
   TaskHistory,
   Activity,
 } from './types'
-import { transformDateFromDB, parseJSONField } from './api-utils'
+import { transformDateFromDB, transformDateToDB, parseJSONField } from './api-utils'
 
 /**
  * Prisma Project type (from database)
@@ -26,6 +27,21 @@ export interface PrismaProject {
   subcategories: string // JSON stringified array
   createdAt: string // ISO date
   jiraKey: string | null
+}
+
+/**
+ * Prisma Board type (from database)
+ * Dates are ISO strings, content is JSON string
+ */
+export interface PrismaBoard {
+  id: string
+  name: string
+  projectId: string | null
+  thumbnailPath: string | null
+  content: string // JSON stringified Excalidraw state
+  createdAt: string // ISO date
+  updatedAt: string // ISO date
+  isArchived: boolean
 }
 
 /**
@@ -260,6 +276,38 @@ export const transformPrismaProjectToClient = (prismaProject: PrismaProject): Pr
     subcategories: parseJSONField<string[]>(prismaProject.subcategories),
     createdAt: transformDateFromDB(prismaProject.createdAt),
     jiraKey: prismaProject.jiraKey,
+  }
+}
+
+/**
+ * Transform Prisma board to client board
+ */
+export const transformPrismaBoardToClient = (prismaBoard: PrismaBoard): Board => {
+  return {
+    id: prismaBoard.id,
+    name: prismaBoard.name,
+    projectId: prismaBoard.projectId,
+    thumbnailPath: prismaBoard.thumbnailPath,
+    content: prismaBoard.content,
+    createdAt: transformDateFromDB(prismaBoard.createdAt),
+    updatedAt: transformDateFromDB(prismaBoard.updatedAt),
+    isArchived: prismaBoard.isArchived,
+  }
+}
+
+/**
+ * Transform client board to Prisma board
+ */
+export const transformClientBoardToPrisma = (clientBoard: Board): PrismaBoard => {
+  return {
+    id: clientBoard.id,
+    name: clientBoard.name,
+    projectId: clientBoard.projectId,
+    thumbnailPath: clientBoard.thumbnailPath,
+    content: clientBoard.content,
+    createdAt: transformDateToDB(clientBoard.createdAt),
+    updatedAt: transformDateToDB(clientBoard.updatedAt),
+    isArchived: clientBoard.isArchived,
   }
 }
 

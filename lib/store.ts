@@ -1555,12 +1555,30 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
     }),
     {
       name: "ToolingTracker-storage",
+      version: 1, // Increment this when state structure changes
       // Only persist UI state to localStorage, not data from database
       // This prevents race conditions where stale UI state overwrites fresh API data
       partialize: (state) => ({
         selectedProjectId: state.selectedProjectId,
         boardFilters: state.boardFilters,
       }),
+      // Migration function to handle state structure changes
+      migrate: (persistedState: any, version: number) => {
+        // If no version, it's old state - return default structure
+        if (version === 0 || !persistedState) {
+          return {
+            selectedProjectId: null,
+            boardFilters: DEFAULT_BOARD_FILTERS,
+          }
+        }
+        
+        // Ensure boardFilters has all required fields
+        if (persistedState && !persistedState.boardFilters) {
+          persistedState.boardFilters = DEFAULT_BOARD_FILTERS
+        }
+        
+        return persistedState
+      },
       // Handle localStorage quota errors
       onRehydrateStorage: () => (state, error) => {
         if (error) {
