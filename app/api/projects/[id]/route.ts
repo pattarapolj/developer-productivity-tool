@@ -4,10 +4,10 @@ import { transformPrismaProjectToClient } from '@/lib/api-types'
 
 export async function GET(
     _request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params
+        const { id } = await params
         const project = await prisma.project.findUnique({
             where: { id }
         })
@@ -28,10 +28,10 @@ export async function GET(
 
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params
+        const { id } = await params
         const body = await request.json()
 
         // Validate required fields
@@ -74,10 +74,10 @@ export async function PATCH(
 
 export async function DELETE(
     _request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params
+        const { id } = await params
 
         await prisma.project.delete({
             where: { id }

@@ -22,13 +22,13 @@ export class APIError extends Error {
 }
 
 /**
- * Transform ISO date string from database to Date object for client
- * @param isoString - ISO date string from Prisma (e.g., "2026-01-15T10:30:00.000Z")
+ * Transform ISO date string or Date object from database to Date object for client
+ * @param value - ISO date string or Date object from Prisma
  * @returns Date object or null if input is null/undefined
  */
-export const transformDateFromDB = (isoString: string | null | undefined): Date | null => {
-  if (!isoString) return null
-  return new Date(isoString)
+export const transformDateFromDB = (value: string | Date | null | undefined): Date | null => {
+  if (!value) return null
+  return value instanceof Date ? value : new Date(value)
 }
 
 /**

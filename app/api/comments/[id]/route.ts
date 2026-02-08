@@ -3,10 +3,14 @@ import { prisma } from '@/lib/db'
 import { transformPrismaCommentToClient } from '@/lib/api-types'
 import type { UpdateCommentRequest } from '@/lib/api-types'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     const comment = await (prisma as any).taskComment.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!comment) {
@@ -26,8 +30,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     const body: UpdateCommentRequest = await request.json()
 
     // Validate required fields
@@ -40,7 +48,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     // Verify comment exists
     const existingComment = await (prisma as any).taskComment.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingComment) {
@@ -51,7 +59,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     const comment = await (prisma as any).taskComment.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         content: body.content.trim(),
       },
@@ -63,7 +71,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         taskId: existingComment.taskId,
         type: 'comment_updated',
         description: `Comment updated`,
-        metadata: JSON.stringify({ commentId: params.id }),
+        metadata: JSON.stringify({ commentId: id }),
       },
     })
 
@@ -77,11 +85,15 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
     // Verify comment exists
     const comment = await (prisma as any).taskComment.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!comment) {
@@ -92,7 +104,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     await (prisma as any).taskComment.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     // Auto-generate Activity record
@@ -101,7 +113,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         taskId: comment.taskId,
         type: 'comment_deleted',
         description: `Comment deleted`,
-        metadata: JSON.stringify({ commentId: params.id }),
+        metadata: JSON.stringify({ commentId: id }),
       },
     })
 

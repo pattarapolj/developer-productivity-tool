@@ -18,20 +18,20 @@ import { transformDateFromDB, transformDateToDB, parseJSONField } from './api-ut
 
 /**
  * Prisma Project type (from database)
- * Dates are ISO strings, arrays are JSON strings
+ * Dates can be Date objects or ISO strings, arrays are JSON strings
  */
 export interface PrismaProject {
   id: string
   name: string
   color: string
   subcategories: string // JSON stringified array
-  createdAt: string // ISO date
+  createdAt: string | Date // ISO date or Date object
   jiraKey: string | null
 }
 
 /**
  * Prisma Board type (from database)
- * Dates are ISO strings, content is JSON string
+ * Dates can be Date objects or ISO strings, content is JSON string
  */
 export interface PrismaBoard {
   id: string
@@ -39,14 +39,14 @@ export interface PrismaBoard {
   projectId: string | null
   thumbnailPath: string | null
   content: string // JSON stringified Excalidraw state
-  createdAt: string // ISO date
-  updatedAt: string // ISO date
+  createdAt: string | Date // ISO date or Date object
+  updatedAt: string | Date // ISO date or Date object
   isArchived: boolean
 }
 
 /**
  * Prisma Task type (from database)
- * Dates are ISO strings, arrays are JSON strings
+ * Dates can be Date objects or ISO strings, arrays are JSON strings
  */
 export interface PrismaTask {
   id: string
@@ -55,49 +55,49 @@ export interface PrismaTask {
   status: 'backlog' | 'todo' | 'in-progress' | 'done'
   priority: 'low' | 'medium' | 'high'
   projectId: string
-  dueDate: string | null // ISO date
+  dueDate: string | Date | null // ISO date or Date object
   subcategory: string | null
   jiraKey: string | null
   storyPoints: number | null
-  createdAt: string // ISO date
-  updatedAt: string // ISO date
-  completedAt: string | null // ISO date
+  createdAt: string | Date // ISO date or Date object
+  updatedAt: string | Date // ISO date or Date object
+  completedAt: string | Date | null // ISO date or Date object
   isArchived: boolean
-  archivedAt: string | null // ISO date
+  archivedAt: string | Date | null // ISO date or Date object
   blockedBy: string // JSON stringified array of task IDs
   blocking: string // JSON stringified array of task IDs
 }
 
 /**
  * Prisma TimeEntry type (from database)
- * Date is ISO string
+ * Date can be Date object or ISO string
  */
 export interface PrismaTimeEntry {
   id: string
   taskId: string
   hours: number
   minutes: number
-  date: string // ISO date
+  date: string | Date // ISO date or Date object
   notes: string
   type: 'development' | 'meeting' | 'review' | 'research' | 'debugging' | 'other'
-  createdAt: string // ISO date
+  createdAt: string | Date // ISO date or Date object
 }
 
 /**
  * Prisma TaskComment type (from database)
- * Dates are ISO strings
+ * Dates can be Date objects or ISO strings
  */
 export interface PrismaTaskComment {
   id: string
   taskId: string
   content: string
-  createdAt: string // ISO date
-  updatedAt: string // ISO date
+  createdAt: string | Date // ISO date or Date object
+  updatedAt: string | Date // ISO date or Date object
 }
 
 /**
  * Prisma TaskAttachment type (from database)
- * Date is ISO string
+ * Date can be Date object or ISO string
  */
 export interface PrismaTaskAttachment {
   id: string
@@ -106,12 +106,12 @@ export interface PrismaTaskAttachment {
   fileSize: number
   fileType: string
   dataUrl: string
-  uploadedAt: string // ISO date
+  uploadedAt: string | Date // ISO date or Date object
 }
 
 /**
  * Prisma TaskHistory type (from database)
- * Date is ISO string
+ * Date can be Date object or ISO string
  */
 export interface PrismaTaskHistory {
   id: string
@@ -119,30 +119,21 @@ export interface PrismaTaskHistory {
   field: string
   oldValue: string
   newValue: string
-  changedAt: string // ISO date
+  changedAt: string | Date // ISO date or Date object
 }
 
 /**
  * Prisma Activity type (from database)
- * Date is ISO string, metadata is JSON string
+ * Date is ISO string (or Date object), metadata is JSON string
  */
 export interface PrismaActivity {
   id: string
   taskId: string
   projectId: string | null
-  type:
-    | 'task_created'
-    | 'task_updated'
-    | 'task_status_changed'
-    | 'task_archived'
-    | 'task_unarchived'
-    | 'task_deleted'
-    | 'time_logged'
-    | 'comment_added'
-    | 'attachment_added'
+  type: string // Activity type as stored in database
   description: string
   metadata: string // JSON stringified object
-  createdAt: string // ISO date
+  createdAt: string | Date // ISO date or Date object
 }
 
 /**
