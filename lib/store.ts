@@ -67,9 +67,9 @@ interface ToolingTrackerState {
   resetBoardFilters: () => void
 
   // Time entry actions
-  addTimeEntry: (entry: Omit<TimeEntry, "id" | "createdAt">) => void
-  updateTimeEntry: (id: string, updates: Partial<TimeEntry>) => void
-  deleteTimeEntry: (id: string) => void
+  addTimeEntry: (entry: Omit<TimeEntry, "id" | "createdAt">) => Promise<void>
+  updateTimeEntry: (id: string, updates: Partial<TimeEntry>) => Promise<void>
+  deleteTimeEntry: (id: string) => Promise<void>
 
   // Computed helpers
   getTasksForProject: (projectId: string) => Task[]
@@ -94,14 +94,14 @@ interface ToolingTrackerState {
   getActivitiesForTask: (taskId: string) => Activity[]
   
   // Comment actions
-  addComment: (comment: Omit<TaskComment, "id" | "createdAt" | "updatedAt">) => void
-  updateComment: (id: string, content: string) => void
-  deleteComment: (id: string) => void
+  addComment: (comment: Omit<TaskComment, "id" | "createdAt" | "updatedAt">) => Promise<void>
+  updateComment: (id: string, content: string) => Promise<void>
+  deleteComment: (id: string) => Promise<void>
   getCommentsForTask: (taskId: string) => TaskComment[]
   
   // Attachment actions
-  addAttachment: (attachment: Omit<TaskAttachment, "id" | "uploadedAt">) => void
-  deleteAttachment: (id: string) => void
+  addAttachment: (attachment: Omit<TaskAttachment, "id" | "uploadedAt">) => Promise<void>
+  deleteAttachment: (id: string) => Promise<void>
   getAttachmentsForTask: (taskId: string) => TaskAttachment[]
   
   // History actions
@@ -519,54 +519,63 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         set({ boardFilters: DEFAULT_BOARD_FILTERS })
       },
 
-      addTimeEntry: (entry) => {
-        // Validate task exists
-        const taskExists = get().tasks.some(t => t.id === entry.taskId)
-        if (!taskExists) {
-          console.error('Task not found:', entry.taskId)
-          return
+      // Time entry actions
+      addTimeEntry: async (entry) => {
+        try {
+          set({ isLoading: true, error: null })
+
+          const newEntry = await apiClient.post<TimeEntry>('/api/time-entries', {
+            taskId: entry.taskId,
+            date: entry.date,
+            hours: entry.hours,
+            minutes: entry.minutes,
+            notes: entry.notes || '',
+            type: entry.type || 'development',
+          })
+
+          set((state) => ({
+            timeEntries: [...state.timeEntries, newEntry],
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to add time entry'
+          set({ error: message, isLoading: false })
+          console.error('Failed to add time entry:', error)
         }
-        // Validate time values
-        if (entry.hours < 0 || entry.minutes < 0 || entry.minutes >= 60) {
-          console.error('Invalid time values')
-          return
-        }
-        const now = new Date()
-        const newEntry: TimeEntry = {
-          ...entry,
-          id: generateId(),
-          notes: entry.notes?.trim() || '',
-          type: entry.type || 'development',
-          createdAt: now,
-        }
-        
-        // Log activity
-        const task = get().tasks.find(t => t.id === entry.taskId)
-        const activity = {
-          id: generateId(),
-          taskId: entry.taskId,
-          type: 'time_logged' as const,
-          description: `Logged ${entry.hours}h ${entry.minutes}m (${entry.type || 'development'})`,
-          metadata: { hours: entry.hours, minutes: entry.minutes, type: entry.type },
-          createdAt: now,
-        }
-        
-        set((state) => ({ 
-          timeEntries: [...state.timeEntries, newEntry],
-          activities: [...state.activities, activity]
-        }))
       },
 
-      updateTimeEntry: (id, updates) => {
-        set((state) => ({
-          timeEntries: state.timeEntries.map((te) => (te.id === id ? { ...te, ...updates } : te)),
-        }))
+      updateTimeEntry: async (id, updates) => {
+        try {
+          set({ isLoading: true, error: null })
+
+          const updatedEntry = await apiClient.patch<TimeEntry>(`/api/time-entries/${id}`, updates)
+
+          set((state) => ({
+            timeEntries: state.timeEntries.map((te) => (te.id === id ? updatedEntry : te)),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to update time entry'
+          set({ error: message, isLoading: false })
+          console.error('Failed to update time entry:', error)
+        }
       },
 
-      deleteTimeEntry: (id) => {
-        set((state) => ({
-          timeEntries: state.timeEntries.filter((te) => te.id !== id),
-        }))
+      deleteTimeEntry: async (id) => {
+        try {
+          set({ isLoading: true, error: null })
+
+          await apiClient.delete(`/api/time-entries/${id}`)
+
+          set((state) => ({
+            timeEntries: state.timeEntries.filter((te) => te.id !== id),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to delete time entry'
+          set({ error: message, isLoading: false })
+          console.error('Failed to delete time entry:', error)
+        }
       },
 
       getTasksForProject: (projectId) => {
@@ -1191,42 +1200,59 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       },
 
       // Comment actions
-      addComment: (comment) => {
-        const now = new Date()
-        const newComment = {
-          ...comment,
-          id: generateId(),
-          createdAt: now,
-          updatedAt: now,
+      // Comment actions
+      addComment: async (comment) => {
+        try {
+          set({ isLoading: true, error: null })
+
+          const newComment = await apiClient.post<TaskComment>('/api/comments', {
+            taskId: comment.taskId,
+            content: comment.content,
+          })
+
+          set((state) => ({
+            comments: [...state.comments, newComment],
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to add comment'
+          set({ error: message, isLoading: false })
+          console.error('Failed to add comment:', error)
         }
-        
-        const activity = {
-          id: generateId(),
-          taskId: comment.taskId,
-          type: 'comment_added' as const,
-          description: `Comment added`,
-          metadata: { commentId: newComment.id },
-          createdAt: now,
-        }
-        
-        set((state) => ({ 
-          comments: [...state.comments, newComment],
-          activities: [...state.activities, activity]
-        }))
       },
 
-      updateComment: (id, content) => {
-        set((state) => ({
-          comments: state.comments.map((c) => 
-            c.id === id ? { ...c, content, updatedAt: new Date() } : c
-          ),
-        }))
+      updateComment: async (id, content) => {
+        try {
+          set({ isLoading: true, error: null })
+
+          const updatedComment = await apiClient.patch<TaskComment>(`/api/comments/${id}`, { content })
+
+          set((state) => ({
+            comments: state.comments.map((c) => (c.id === id ? updatedComment : c)),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to update comment'
+          set({ error: message, isLoading: false })
+          console.error('Failed to update comment:', error)
+        }
       },
 
-      deleteComment: (id) => {
-        set((state) => ({
-          comments: state.comments.filter((c) => c.id !== id),
-        }))
+      deleteComment: async (id) => {
+        try {
+          set({ isLoading: true, error: null })
+
+          await apiClient.delete(`/api/comments/${id}`)
+
+          set((state) => ({
+            comments: state.comments.filter((c) => c.id !== id),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to delete comment'
+          set({ error: message, isLoading: false })
+          console.error('Failed to delete comment:', error)
+        }
       },
 
       getCommentsForTask: (taskId) => {
@@ -1236,33 +1262,43 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       },
 
       // Attachment actions
-      addAttachment: (attachment) => {
-        const now = new Date()
-        const newAttachment = {
-          ...attachment,
-          id: generateId(),
-          uploadedAt: now,
+      addAttachment: async (attachment) => {
+        try {
+          set({ isLoading: true, error: null })
+
+          const newAttachment = await apiClient.post<TaskAttachment>('/api/attachments', {
+            taskId: attachment.taskId,
+            fileName: attachment.fileName,
+            fileSize: attachment.fileSize,
+            fileType: attachment.fileType,
+          })
+
+          set((state) => ({
+            attachments: [...state.attachments, newAttachment],
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to add attachment'
+          set({ error: message, isLoading: false })
+          console.error('Failed to add attachment:', error)
         }
-        
-        const activity = {
-          id: generateId(),
-          taskId: attachment.taskId,
-          type: 'attachment_added' as const,
-          description: `Attachment added: ${attachment.fileName}`,
-          metadata: { attachmentId: newAttachment.id, fileName: attachment.fileName },
-          createdAt: now,
-        }
-        
-        set((state) => ({ 
-          attachments: [...state.attachments, newAttachment],
-          activities: [...state.activities, activity]
-        }))
       },
 
-      deleteAttachment: (id) => {
-        set((state) => ({
-          attachments: state.attachments.filter((a) => a.id !== id),
-        }))
+      deleteAttachment: async (id) => {
+        try {
+          set({ isLoading: true, error: null })
+
+          await apiClient.delete(`/api/attachments/${id}`)
+
+          set((state) => ({
+            attachments: state.attachments.filter((a) => a.id !== id),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to delete attachment'
+          set({ error: message, isLoading: false })
+          console.error('Failed to delete attachment:', error)
+        }
       },
 
       getAttachmentsForTask: (taskId) => {

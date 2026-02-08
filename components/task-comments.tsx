@@ -20,10 +20,10 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
 
   const comments = getCommentsForTask(taskId)
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!newComment.trim()) return
 
-    addComment({
+    await addComment({
       taskId,
       content: newComment.trim(),
     })
@@ -36,10 +36,10 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
     setEditContent(comment.content)
   }
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingId || !editContent.trim()) return
 
-    updateComment(editingId, editContent.trim())
+    await updateComment(editingId, editContent.trim())
     setEditingId(null)
     setEditContent('')
   }
@@ -49,9 +49,9 @@ export function TaskComments({ taskId }: TaskCommentsProps) {
     setEditContent('')
   }
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this comment?')) {
-      deleteComment(id)
+      await deleteComment(id)
     }
   }
 

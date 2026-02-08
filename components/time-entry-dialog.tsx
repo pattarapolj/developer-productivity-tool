@@ -57,7 +57,7 @@ export function TimeEntryDialog({ open, onOpenChange, taskId }: TimeEntryDialogP
     }
   }, [open])
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const h = Number.parseInt(hours) || 0
     const m = Number.parseInt(minutes) || 0
 
@@ -72,9 +72,9 @@ export function TimeEntryDialog({ open, onOpenChange, taskId }: TimeEntryDialogP
     }
 
     if (editingEntryId) {
-      updateTimeEntry(editingEntryId, payload)
+      await updateTimeEntry(editingEntryId, payload)
     } else {
-      addTimeEntry({ taskId, ...payload })
+      await addTimeEntry({ taskId, ...payload })
     }
 
     resetForm()
@@ -186,8 +186,8 @@ export function TimeEntryDialog({ open, onOpenChange, taskId }: TimeEntryDialogP
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6 text-destructive"
-                          onClick={() => {
-                            deleteTimeEntry(entry.id)
+                          onClick={async () => {
+                            await deleteTimeEntry(entry.id)
                             if (editingEntryId === entry.id) {
                               resetForm()
                             }

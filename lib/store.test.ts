@@ -70,6 +70,25 @@ describe('Focus Time Analysis - Store Helpers', () => {
     return newTask
   }
 
+  // Helper to inject a time entry directly into store (for testing, bypasses API)
+  const generateId = () =>
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2, 15)
+
+  const injectTimeEntry = (entry: Omit<TimeEntry, 'id' | 'createdAt'>) => {
+    useToolingTrackerStore.setState((state) => ({
+      timeEntries: [
+        ...state.timeEntries,
+        {
+          ...entry,
+          id: generateId(),
+          createdAt: new Date(),
+        },
+      ],
+    }))
+  }
+
   describe('getTimeByEntryType', () => {
     it('should calculate correct totals for each time entry type', () => {
       const store = useToolingTrackerStore.getState()
@@ -96,7 +115,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
         { taskId, hours: 3, minutes: 0, date: new Date('2026-01-12'), notes: 'More dev', type: 'development' },
       ]
 
-      timeEntries.forEach(entry => store.addTimeEntry(entry))
+      timeEntries.forEach(entry => injectTimeEntry(entry))
 
       const result = store.getTimeByEntryType()
 
@@ -147,8 +166,8 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const taskId = useToolingTrackerStore.getState().tasks[0].id
 
       // Add entries: 80 mins dev, 20 mins meeting (total 100 mins)
-      store.addTimeEntry({ taskId, hours: 1, minutes: 20, date: new Date('2026-01-10'), notes: 'Dev', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 0, minutes: 20, date: new Date('2026-01-10'), notes: 'Meeting', type: 'meeting' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 20, date: new Date('2026-01-10'), notes: 'Dev', type: 'development' })
+      injectTimeEntry({ taskId, hours: 0, minutes: 20, date: new Date('2026-01-10'), notes: 'Meeting', type: 'meeting' })
 
       const result = store.getTimeByEntryType()
 
@@ -178,9 +197,9 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const taskId = useToolingTrackerStore.getState().tasks[0].id
 
       // Add entries on different dates
-      store.addTimeEntry({ taskId, hours: 2, minutes: 0, date: new Date('2025-12-15'), notes: 'Old dev work', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 1, minutes: 0, date: new Date('2026-01-05'), notes: 'Recent dev work', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 1, minutes: 0, date: new Date('2026-01-10'), notes: 'Very recent meeting', type: 'meeting' })
+      injectTimeEntry({ taskId, hours: 2, minutes: 0, date: new Date('2025-12-15'), notes: 'Old dev work', type: 'development' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 0, date: new Date('2026-01-05'), notes: 'Recent dev work', type: 'development' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 0, date: new Date('2026-01-10'), notes: 'Very recent meeting', type: 'meeting' })
 
       // Filter from Jan 1, 2026 to Jan 15, 2026
       const startDate = new Date('2026-01-01T00:00:00.000Z')
@@ -221,7 +240,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const taskId = useToolingTrackerStore.getState().tasks[0].id
 
       // Only add development time
-      store.addTimeEntry({ taskId, hours: 2, minutes: 0, date: new Date('2026-01-10'), notes: 'Dev', type: 'development' })
+      injectTimeEntry({ taskId, hours: 2, minutes: 0, date: new Date('2026-01-10'), notes: 'Dev', type: 'development' })
 
       const result = store.getTimeByEntryType()
 
@@ -252,9 +271,9 @@ describe('Focus Time Analysis - Store Helpers', () => {
 
       // Add 3 consecutive development entries on same day and task (total 3 hours)
       const date = new Date('2026-01-10T00:00:00.000Z')
-      store.addTimeEntry({ taskId, hours: 1, minutes: 0, date, notes: 'Dev 1', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 1, minutes: 30, date, notes: 'Dev 2', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 0, minutes: 30, date, notes: 'Dev 3', type: 'development' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 0, date, notes: 'Dev 1', type: 'development' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 30, date, notes: 'Dev 2', type: 'development' })
+      injectTimeEntry({ taskId, hours: 0, minutes: 30, date, notes: 'Dev 3', type: 'development' })
 
       const result = store.getDeepWorkSessions(2)
 
@@ -284,7 +303,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
 
       // Add only 1.5 hours of development
       const date = new Date('2026-01-10')
-      store.addTimeEntry({ taskId, hours: 1, minutes: 30, date, notes: 'Short dev', type: 'development' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 30, date, notes: 'Short dev', type: 'development' })
 
       const result = store.getDeepWorkSessions(2)
 
@@ -310,10 +329,10 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const taskId = useToolingTrackerStore.getState().tasks[0].id
 
       // 2.5 hours on Jan 10
-      store.addTimeEntry({ taskId, hours: 2, minutes: 30, date: new Date('2026-01-10'), notes: 'Dev', type: 'development' })
+      injectTimeEntry({ taskId, hours: 2, minutes: 30, date: new Date('2026-01-10'), notes: 'Dev', type: 'development' })
       
       // 3 hours on Jan 11
-      store.addTimeEntry({ taskId, hours: 3, minutes: 0, date: new Date('2026-01-11'), notes: 'Dev', type: 'development' })
+      injectTimeEntry({ taskId, hours: 3, minutes: 0, date: new Date('2026-01-11'), notes: 'Dev', type: 'development' })
 
       const result = store.getDeepWorkSessions(2)
 
@@ -357,10 +376,10 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const date = new Date('2026-01-10')
       
       // 2 hours on task 1
-      store.addTimeEntry({ taskId: task1Id, hours: 2, minutes: 0, date, notes: 'Dev 1', type: 'development' })
+      injectTimeEntry({ taskId: task1Id, hours: 2, minutes: 0, date, notes: 'Dev 1', type: 'development' })
       
       // 2.5 hours on task 2
-      store.addTimeEntry({ taskId: task2Id, hours: 2, minutes: 30, date, notes: 'Dev 2', type: 'development' })
+      injectTimeEntry({ taskId: task2Id, hours: 2, minutes: 30, date, notes: 'Dev 2', type: 'development' })
 
       const result = store.getDeepWorkSessions(2)
 
@@ -390,9 +409,9 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const date = new Date('2026-01-10')
       
       // Mix of types totaling 3 hours, but only 1.5 hours dev
-      store.addTimeEntry({ taskId, hours: 1, minutes: 30, date, notes: 'Dev', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 1, minutes: 0, date, notes: 'Meeting', type: 'meeting' })
-      store.addTimeEntry({ taskId, hours: 0, minutes: 30, date, notes: 'Review', type: 'review' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 30, date, notes: 'Dev', type: 'development' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 0, date, notes: 'Meeting', type: 'meeting' })
+      injectTimeEntry({ taskId, hours: 0, minutes: 30, date, notes: 'Review', type: 'review' })
 
       const result = store.getDeepWorkSessions(2)
 
@@ -697,10 +716,10 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const date = new Date('2026-01-10')
       
       // Add different types of time entries
-      store.addTimeEntry({ taskId, hours: 2, minutes: 30, date, notes: 'Dev', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 1, minutes: 0, date, notes: 'Meeting', type: 'meeting' })
-      store.addTimeEntry({ taskId, hours: 0, minutes: 45, date, notes: 'Review', type: 'review' })
-      store.addTimeEntry({ taskId, hours: 1, minutes: 15, date, notes: 'More dev', type: 'development' })
+      injectTimeEntry({ taskId, hours: 2, minutes: 30, date, notes: 'Dev', type: 'development' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 0, date, notes: 'Meeting', type: 'meeting' })
+      injectTimeEntry({ taskId, hours: 0, minutes: 45, date, notes: 'Review', type: 'review' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 15, date, notes: 'More dev', type: 'development' })
 
       const startDate = new Date('2026-01-09')
       const endDate = new Date('2026-01-11')
@@ -733,9 +752,9 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const taskId = useToolingTrackerStore.getState().tasks[0].id
       
       // Add entries on different dates
-      store.addTimeEntry({ taskId, hours: 2, minutes: 0, date: new Date('2026-01-09'), notes: 'Before', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 3, minutes: 0, date: new Date('2026-01-10'), notes: 'During', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 1, minutes: 0, date: new Date('2026-01-11'), notes: 'After', type: 'development' })
+      injectTimeEntry({ taskId, hours: 2, minutes: 0, date: new Date('2026-01-09'), notes: 'Before', type: 'development' })
+      injectTimeEntry({ taskId, hours: 3, minutes: 0, date: new Date('2026-01-10'), notes: 'During', type: 'development' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 0, date: new Date('2026-01-11'), notes: 'After', type: 'development' })
 
       const startDate = new Date('2026-01-10')
       startDate.setHours(0, 0, 0, 0)
@@ -783,9 +802,9 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const taskId = useToolingTrackerStore.getState().tasks[0].id
       
       // Add entries on different days
-      store.addTimeEntry({ taskId, hours: 2, minutes: 0, date: new Date('2026-01-10'), notes: 'Day 1', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 3, minutes: 30, date: new Date('2026-01-11'), notes: 'Day 2', type: 'development' })
-      store.addTimeEntry({ taskId, hours: 1, minutes: 15, date: new Date('2026-01-11'), notes: 'Day 2 more', type: 'meeting' })
+      injectTimeEntry({ taskId, hours: 2, minutes: 0, date: new Date('2026-01-10'), notes: 'Day 1', type: 'development' })
+      injectTimeEntry({ taskId, hours: 3, minutes: 30, date: new Date('2026-01-11'), notes: 'Day 2', type: 'development' })
+      injectTimeEntry({ taskId, hours: 1, minutes: 15, date: new Date('2026-01-11'), notes: 'Day 2 more', type: 'meeting' })
 
       const startDate = new Date('2026-01-10')
       startDate.setHours(0, 0, 0, 0)
@@ -819,7 +838,7 @@ describe('Focus Time Analysis - Store Helpers', () => {
       const taskId = useToolingTrackerStore.getState().tasks[0].id
       
       // Add entry only on first day
-      store.addTimeEntry({ taskId, hours: 4, minutes: 0, date: new Date('2026-01-10'), notes: 'Only day', type: 'development' })
+      injectTimeEntry({ taskId, hours: 4, minutes: 0, date: new Date('2026-01-10'), notes: 'Only day', type: 'development' })
 
       const startDate = new Date('2026-01-10')
       const endDate = new Date('2026-01-16') // 7 days
@@ -1216,21 +1235,21 @@ describe('Focus Time Analysis - Store Helpers', () => {
       }))
       
       // Add time entries (3 hours for P1, 5 hours for P2)
-      store.addTimeEntry({
+      injectTimeEntry({
         taskId: task1.id,
         date: now,
         hours: 3,
         minutes: 0,
-        description: 'Work on P1',
+        notes: 'Work on P1',
         type: 'development',
       })
       
-      store.addTimeEntry({
+      injectTimeEntry({
         taskId: task2.id,
         date: now,
         hours: 5,
         minutes: 0,
-        description: 'Work on P2',
+        notes: 'Work on P2',
         type: 'development',
       })
       
@@ -1281,12 +1300,12 @@ describe('Focus Time Analysis - Store Helpers', () => {
       
       // Add time entries (2 hours each)
       useToolingTrackerStore.getState().tasks.forEach((task) => {
-        store.addTimeEntry({
+        injectTimeEntry({
           taskId: task.id,
           date: now,
           hours: 2,
           minutes: 0,
-          description: 'Work',
+          notes: 'Work',
           type: 'development',
         })
       })
@@ -3077,6 +3096,1082 @@ describe('API Integration - Store Actions', () => {
         const state = useToolingTrackerStore.getState()
         expect(state.tasks[0].blockedBy).not.toContain('blocker1')
         expect(state.tasks[1].blocking).not.toContain('task1')
+      })
+    })
+  })
+
+  describe('Phase 4 - Async Time Entry, Comment, and Attachment Operations', () => {
+    const mockTask = {
+      id: 'task1',
+      title: 'Test Task',
+      description: 'Test',
+      status: 'todo' as const,
+      priority: 'medium' as const,
+      projectId: 'test-project-1',
+      dueDate: null,
+      subcategory: null,
+      jiraKey: null,
+      storyPoints: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completedAt: null,
+      isArchived: false,
+      archivedAt: null,
+      blockedBy: [],
+      blocking: [],
+    }
+
+    describe('addTimeEntry - async API-backed', () => {
+      it('should call POST /api/time-entries with time entry data', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Dev work',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockTimeEntry,
+          status: 201,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addTimeEntry({
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Dev work',
+          type: 'development',
+        })
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/time-entries',
+          expect.objectContaining({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              taskId: 'task1',
+              hours: 2,
+              minutes: 30,
+              date: new Date('2026-01-15'),
+              notes: 'Dev work',
+              type: 'development',
+            }),
+          })
+        )
+      })
+
+      it('should add time entry to store from API response', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], timeEntries: [] })
+
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Dev work',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockTimeEntry,
+          status: 201,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addTimeEntry({
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Dev work',
+          type: 'development',
+        })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.timeEntries).toHaveLength(1)
+        expect(state.timeEntries[0].id).toBe('time1')
+        expect(state.timeEntries[0].hours).toBe(2)
+        expect(state.timeEntries[0].minutes).toBe(30)
+      })
+
+      it('should set loading state during request', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 1,
+          minutes: 0,
+          date: new Date(),
+          notes: '',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        let loadingDuringFetch = false
+        vi.mocked(global.fetch).mockImplementation(async () => {
+          loadingDuringFetch = useToolingTrackerStore.getState().isLoading
+          return {
+            ok: true,
+            json: async () => mockTimeEntry,
+            status: 201,
+          } as Response
+        })
+
+        const store = useToolingTrackerStore.getState()
+        await store.addTimeEntry({
+          taskId: 'task1',
+          hours: 1,
+          minutes: 0,
+          date: new Date(),
+          notes: '',
+          type: 'development',
+        })
+
+        expect(loadingDuringFetch).toBe(true)
+        expect(useToolingTrackerStore.getState().isLoading).toBe(false)
+      })
+
+      it('should set error on API failure', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          text: async () => 'Invalid time entry',
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addTimeEntry({
+          taskId: 'task1',
+          hours: 1,
+          minutes: 0,
+          date: new Date(),
+          notes: '',
+          type: 'development',
+        })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.error).toBeTruthy()
+        expect(state.isLoading).toBe(false)
+        expect(state.timeEntries).toHaveLength(0)
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], activities: [], timeEntries: [] })
+
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 1,
+          minutes: 0,
+          date: new Date(),
+          notes: '',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockTimeEntry,
+          status: 201,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+
+        await store.addTimeEntry({
+          taskId: 'task1',
+          hours: 1,
+          minutes: 0,
+          date: new Date(),
+          notes: '',
+          type: 'development',
+        })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+
+      it('should use server-generated ID from response', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const mockTimeEntry: TimeEntry = {
+          id: 'server-generated-id-12345',
+          taskId: 'task1',
+          hours: 1,
+          minutes: 0,
+          date: new Date(),
+          notes: '',
+          type: 'development',
+          createdAt: new Date('2026-01-15T10:00:00Z'),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockTimeEntry,
+          status: 201,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addTimeEntry({
+          taskId: 'task1',
+          hours: 1,
+          minutes: 0,
+          date: new Date(),
+          notes: '',
+          type: 'development',
+        })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.timeEntries[0].id).toBe('server-generated-id-12345')
+      })
+    })
+
+    describe('updateTimeEntry - async API-backed', () => {
+      it('should call PATCH /api/time-entries/:id with updates', async () => {
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Old notes',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ timeEntries: [mockTimeEntry] })
+
+        const updatedEntry: TimeEntry = {
+          ...mockTimeEntry,
+          notes: 'Updated notes',
+          hours: 3,
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => updatedEntry,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.updateTimeEntry('time1', { notes: 'Updated notes', hours: 3 })
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/time-entries/time1',
+          expect.objectContaining({
+            method: 'PATCH',
+            body: JSON.stringify({ notes: 'Updated notes', hours: 3 }),
+          })
+        )
+      })
+
+      it('should update time entry in store from API response', async () => {
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Old notes',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ timeEntries: [mockTimeEntry] })
+
+        const updatedEntry: TimeEntry = {
+          ...mockTimeEntry,
+          notes: 'Updated notes',
+          hours: 3,
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => updatedEntry,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.updateTimeEntry('time1', { notes: 'Updated notes', hours: 3 })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.timeEntries[0].notes).toBe('Updated notes')
+        expect(state.timeEntries[0].hours).toBe(3)
+      })
+
+      it('should set error on API failure', async () => {
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Notes',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ timeEntries: [mockTimeEntry] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: async () => 'Time entry not found',
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.updateTimeEntry('time1', { hours: 3 })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.error).toBeTruthy()
+        expect(state.isLoading).toBe(false)
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Notes',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ timeEntries: [mockTimeEntry], activities: [] })
+
+        const updatedEntry: TimeEntry = { ...mockTimeEntry, hours: 3 }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => updatedEntry,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+
+        await store.updateTimeEntry('time1', { hours: 3 })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+    })
+
+    describe('deleteTimeEntry - async API-backed', () => {
+      it('should call DELETE /api/time-entries/:id', async () => {
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Notes',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ timeEntries: [mockTimeEntry] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => null,
+          status: 204,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.deleteTimeEntry('time1')
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/time-entries/time1',
+          expect.objectContaining({
+            method: 'DELETE',
+          })
+        )
+      })
+
+      it('should remove time entry from store after successful delete', async () => {
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Notes',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ timeEntries: [mockTimeEntry] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => null,
+          status: 204,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        expect(store.timeEntries).toHaveLength(1)
+
+        await store.deleteTimeEntry('time1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.timeEntries).toHaveLength(0)
+      })
+
+      it('should set error on API failure', async () => {
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Notes',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ timeEntries: [mockTimeEntry] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: async () => 'Time entry not found',
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.deleteTimeEntry('time1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.error).toBeTruthy()
+        expect(state.isLoading).toBe(false)
+        expect(state.timeEntries).toHaveLength(1) // Entry should NOT be removed on error
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        const mockTimeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date('2026-01-15'),
+          notes: 'Notes',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ timeEntries: [mockTimeEntry], activities: [] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => null,
+          status: 204,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+
+        await store.deleteTimeEntry('time1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+    })
+
+    describe('addComment - async API-backed', () => {
+      it('should call POST /api/comments with comment data', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Test comment',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockComment,
+          status: 201,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addComment({
+          taskId: 'task1',
+          content: 'Test comment',
+        })
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/comments',
+          expect.objectContaining({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              taskId: 'task1',
+              content: 'Test comment',
+            }),
+          })
+        )
+      })
+
+      it('should add comment to store from API response', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], comments: [] })
+
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Test comment',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockComment,
+          status: 201,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addComment({
+          taskId: 'task1',
+          content: 'Test comment',
+        })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.comments).toHaveLength(1)
+        expect(state.comments[0].id).toBe('comment1')
+        expect(state.comments[0].content).toBe('Test comment')
+      })
+
+      it('should set error on API failure', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], comments: [] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          text: async () => 'Invalid comment',
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addComment({
+          taskId: 'task1',
+          content: 'Test comment',
+        })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.error).toBeTruthy()
+        expect(state.isLoading).toBe(false)
+        expect(state.comments).toHaveLength(0)
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], comments: [], activities: [] })
+
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Test comment',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockComment,
+          status: 201,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+
+        await store.addComment({
+          taskId: 'task1',
+          content: 'Test comment',
+        })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+    })
+
+    describe('updateComment - async API-backed', () => {
+      it('should call PATCH /api/comments/:id with content', async () => {
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Old content',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ comments: [mockComment] })
+
+        const updatedComment: TaskComment = {
+          ...mockComment,
+          content: 'Updated content',
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => updatedComment,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.updateComment('comment1', 'Updated content')
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/comments/comment1',
+          expect.objectContaining({
+            method: 'PATCH',
+            body: JSON.stringify({ content: 'Updated content' }),
+          })
+        )
+      })
+
+      it('should update comment in store from API response', async () => {
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Old content',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ comments: [mockComment] })
+
+        const updatedComment: TaskComment = {
+          ...mockComment,
+          content: 'Updated content',
+          updatedAt: new Date(),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => updatedComment,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.updateComment('comment1', 'Updated content')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.comments[0].content).toBe('Updated content')
+      })
+
+      it('should set error on API failure', async () => {
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Content',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ comments: [mockComment] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: async () => 'Comment not found',
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.updateComment('comment1', 'Updated content')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.error).toBeTruthy()
+        expect(state.isLoading).toBe(false)
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Content',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ comments: [mockComment], activities: [] })
+
+        const updatedComment: TaskComment = {
+          ...mockComment,
+          content: 'Updated content',
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => updatedComment,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+
+        await store.updateComment('comment1', 'Updated content')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+    })
+
+    describe('deleteComment - async API-backed', () => {
+      it('should call DELETE /api/comments/:id', async () => {
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Content',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ comments: [mockComment] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => null,
+          status: 204,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.deleteComment('comment1')
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/comments/comment1',
+          expect.objectContaining({
+            method: 'DELETE',
+          })
+        )
+      })
+
+      it('should remove comment from store after successful delete', async () => {
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Content',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ comments: [mockComment] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => null,
+          status: 204,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        expect(store.comments).toHaveLength(1)
+
+        await store.deleteComment('comment1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.comments).toHaveLength(0)
+      })
+
+      it('should set error on API failure', async () => {
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Content',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ comments: [mockComment] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status:404,
+          text: async () => 'Comment not found',
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.deleteComment('comment1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.error).toBeTruthy()
+        expect(state.isLoading).toBe(false)
+        expect(state.comments).toHaveLength(1) // Comment should NOT be removed on error
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        const mockComment: TaskComment = {
+          id: 'comment1',
+          taskId: 'task1',
+          content: 'Content',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ comments: [mockComment], activities: [] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => null,
+          status: 204,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+
+        await store.deleteComment('comment1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+    })
+
+    describe('addAttachment - async API-backed', () => {
+      it('should call POST /api/attachments with attachment data', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const mockAttachment: TaskAttachment = {
+          id: 'attach1',
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+          uploadedAt: new Date(),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockAttachment,
+          status: 201,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addAttachment({
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+        })
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/attachments',
+          expect.objectContaining({
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              taskId: 'task1',
+              fileName: 'document.pdf',
+              fileSize: 1024,
+              fileType: 'application/pdf',
+            }),
+          })
+        )
+      })
+
+      it('should add attachment to store from API response', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], attachments: [] })
+
+        const mockAttachment: TaskAttachment = {
+          id: 'attach1',
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+          uploadedAt: new Date(),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockAttachment,
+          status: 201,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addAttachment({
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+        })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.attachments).toHaveLength(1)
+        expect(state.attachments[0].id).toBe('attach1')
+        expect(state.attachments[0].fileName).toBe('document.pdf')
+      })
+
+      it('should set error on API failure', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], attachments: [] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          text: async () => 'Invalid attachment',
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addAttachment({
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+        })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.error).toBeTruthy()
+        expect(state.isLoading).toBe(false)
+        expect(state.attachments).toHaveLength(0)
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], attachments: [], activities: [] })
+
+        const mockAttachment: TaskAttachment = {
+          id: 'attach1',
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+          uploadedAt: new Date(),
+        }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockAttachment,
+          status: 201,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+
+        await store.addAttachment({
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+        })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+    })
+
+    describe('deleteAttachment - async API-backed', () => {
+      it('should call DELETE /api/attachments/:id', async () => {
+        const mockAttachment: TaskAttachment = {
+          id: 'attach1',
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+          uploadedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ attachments: [mockAttachment] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => null,
+          status: 204,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.deleteAttachment('attach1')
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/attachments/attach1',
+          expect.objectContaining({
+            method: 'DELETE',
+          })
+        )
+      })
+
+      it('should remove attachment from store after successful delete', async () => {
+        const mockAttachment: TaskAttachment = {
+          id: 'attach1',
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+          uploadedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ attachments: [mockAttachment] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => null,
+          status: 204,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        expect(store.attachments).toHaveLength(1)
+
+        await store.deleteAttachment('attach1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.attachments).toHaveLength(0)
+      })
+
+      it('should set error on API failure', async () => {
+        const mockAttachment: TaskAttachment = {
+          id: 'attach1',
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+          uploadedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ attachments: [mockAttachment] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: async () => 'Attachment not found',
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.deleteAttachment('attach1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.error).toBeTruthy()
+        expect(state.isLoading).toBe(false)
+        expect(state.attachments).toHaveLength(1) // Attachment should NOT be removed on error
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        const mockAttachment: TaskAttachment = {
+          id: 'attach1',
+          taskId: 'task1',
+          fileName: 'document.pdf',
+          fileSize: 1024,
+          fileType: 'application/pdf',
+          uploadedAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ attachments: [mockAttachment], activities: [] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => null,
+          status: 204,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+
+        await store.deleteAttachment('attach1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
       })
     })
   })
