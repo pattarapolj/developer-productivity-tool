@@ -39,10 +39,10 @@ export default function WhiteboardEdit({
     [boardId, store]
   )
 
-  // Use the auto-save hook
+  // Use the auto-save hook with 500ms debounce (more responsive)
   const { save: saveBoard, status: saveStatus, error: saveError } = useAutoSave(
     handleSave,
-    2000 // 2 second debounce
+    500 // 500ms debounce for better responsiveness
   )
 
   // Handler for content changes from editor

@@ -36,10 +36,30 @@ export function useAutoSave<T>(
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingDataRef = useRef<T | null>(null)
   const isMountedRef = useRef(true)
+  const onSaveRef = useRef(onSave)
+  
+  // Keep onSave ref up to date
+  useEffect(() => {
+    onSaveRef.current = onSave
+  }, [onSave])
 
-  // Clear timers on unmount
+  // Clear timers on unmount - but save pending data first!
   useEffect(() => {
     return () => {
+      // If there's pending data when unmounting, save it immediately
+      if (pendingDataRef.current !== null && timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        
+        // Save immediately using the ref to avoid dependency issues
+        const dataToSave = pendingDataRef.current
+        const saveFunc = onSaveRef.current
+        
+        // Execute save asynchronously but don't wait for it
+        saveFunc(dataToSave).catch(() => {
+          // Silent error on unmount
+        })
+      }
+      
       isMountedRef.current = false
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)

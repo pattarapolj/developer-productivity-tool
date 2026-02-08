@@ -46,14 +46,41 @@ export function serializeExcalidrawState(
 export function deserializeExcalidrawState(jsonString: string): ExcalidrawState {
   try {
     const state = JSON.parse(jsonString)
+    
+    // Clean up appState to remove properties that might cause issues
+    // Excalidraw expects certain properties to be arrays or specific types
+    const cleanAppState = state.appState || {}
+    
+    // Ensure collaborators is an array if it exists
+    if (cleanAppState.collaborators && !Array.isArray(cleanAppState.collaborators)) {
+      delete cleanAppState.collaborators
+    }
+    
+    // Remove any other potentially problematic properties
+    // Keep only the essential appState properties we care about
+    const safeAppState = {
+      zoom: cleanAppState.zoom,
+      scrollX: cleanAppState.scrollX,
+      scrollY: cleanAppState.scrollY,
+      viewBackgroundColor: cleanAppState.viewBackgroundColor,
+      // Don't include collaborators or other multi-user properties
+    }
+    
     return {
       elements: state.elements || [],
-      appState: state.appState || {},
-      ...state,
+      appState: safeAppState,
     }
   } catch (error) {
     console.error('Failed to deserialize Excalidraw state:', error)
-    throw new Error('Invalid Excalidraw state JSON')
+    // Return safe default state instead of throwing
+    return {
+      elements: [],
+      appState: {
+        zoom: { value: 1 },
+        scrollX: 0,
+        scrollY: 0,
+      }
+    }
   }
 }
 
