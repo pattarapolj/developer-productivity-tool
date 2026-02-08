@@ -1347,137 +1347,6 @@ describe('Focus Time Analysis - Store Helpers', () => {
     })
   })
 
-  describe('trackFieldChange and getFormattedHistory', () => {
-    it('should track field changes when task is updated', () => {
-      const store = useToolingTrackerStore.getState()
-      const projectId = store.projects[0].id
-      
-      injectTask({
-        title: 'Test Task',
-        description: 'Test',
-        status: 'todo',
-        priority: 'low',
-        projectId,
-        dueDate: null,
-        subcategory: null,
-        jiraKey: null,
-        storyPoints: null,
-      })
-      
-      const taskId = useToolingTrackerStore.getState().tasks[0].id
-      
-      // Update priority
-      store.updateTask(taskId, { priority: 'high' })
-      
-      const history = store.getHistoryForTask(taskId)
-      expect(history.length).toBeGreaterThan(0)
-      
-      const priorityChange = history.find(h => h.field === 'priority')
-      expect(priorityChange).toBeDefined()
-      expect(priorityChange!.oldValue).toBe('low')
-      expect(priorityChange!.newValue).toBe('high')
-    })
-
-    it('should format history entries with labels', () => {
-      const store = useToolingTrackerStore.getState()
-      const projectId = store.projects[0].id
-      
-      injectTask({
-        title: 'Test Task',
-        description: 'Test',
-        status: 'todo',
-        priority: 'medium',
-        projectId,
-        dueDate: null,
-        subcategory: null,
-        jiraKey: null,
-        storyPoints: null,
-      })
-      
-      const taskId = useToolingTrackerStore.getState().tasks[0].id
-      
-      // Update status
-      store.updateTask(taskId, { status: 'in-progress' })
-      
-      const formattedHistory = store.getFormattedHistory(taskId)
-      expect(formattedHistory.length).toBeGreaterThan(0)
-      
-      const statusChange = formattedHistory.find(h => h.field === 'status')
-      expect(statusChange).toBeDefined()
-      expect(statusChange!.fieldLabel).toBe('Status')
-      expect(statusChange!.oldValueFormatted).toBe('To Do')
-      expect(statusChange!.newValueFormatted).toBe('In Progress')
-    })
-
-    it('should format priority with capitalization', () => {
-      const store = useToolingTrackerStore.getState()
-      const projectId = store.projects[0].id
-      
-      injectTask({
-        title: 'Test Task',
-        description: 'Test',
-        status: 'todo',
-        priority: 'low',
-        projectId,
-        dueDate: null,
-        subcategory: null,
-        jiraKey: null,
-        storyPoints: null,
-      })
-      
-      const taskId = useToolingTrackerStore.getState().tasks[0].id
-      
-      // Update priority
-      store.updateTask(taskId, { priority: 'high' })
-      
-      const formattedHistory = store.getFormattedHistory(taskId)
-      const priorityChange = formattedHistory.find(h => h.field === 'priority')
-      
-      expect(priorityChange).toBeDefined()
-      expect(priorityChange!.oldValueFormatted).toBe('Low')
-      expect(priorityChange!.newValueFormatted).toBe('High')
-    })
-
-    it('should track multiple field changes', () => {
-      const store = useToolingTrackerStore.getState()
-      const projectId = store.projects[0].id
-      
-      injectTask({
-        title: 'Test Task',
-        description: 'Test',
-        status: 'todo',
-        priority: 'low',
-        projectId,
-        dueDate: null,
-        subcategory: null,
-        jiraKey: null,
-        storyPoints: null,
-      })
-      
-      const taskId = useToolingTrackerStore.getState().tasks[0].id
-      
-      // Multiple updates
-      store.updateTask(taskId, { priority: 'high' })
-      store.updateTask(taskId, { status: 'in-progress' })
-      store.updateTask(taskId, { title: 'Updated Task' })
-      
-      const history = store.getHistoryForTask(taskId)
-      expect(history.length).toBeGreaterThanOrEqual(3)
-      
-      const fields = history.map(h => h.field)
-      expect(fields).toContain('priority')
-      expect(fields).toContain('status')
-      expect(fields).toContain('title')
-    })
-
-    it('should return empty array for task with no history', () => {
-      const store = useToolingTrackerStore.getState()
-      
-      const history = store.getFormattedHistory('nonexistent-task')
-      expect(history).toEqual([])
-    })
-  })
-
   describe('Custom Date Range Filtering', () => {
     it('should filter tasks by custom date range', () => {
       const store = useToolingTrackerStore.getState()
@@ -2372,6 +2241,843 @@ describe('API Integration - Store Actions', () => {
       const state = useToolingTrackerStore.getState()
       expect(state.tasks).toHaveLength(0)
       expect(state.timeEntries).toHaveLength(0)
+    })
+  })
+
+  describe('loadInitialData', () => {
+    it('should call all API endpoints in parallel and update store on success', async () => {
+      const mockProjects: Project[] = [
+        {
+          id: '1',
+          name: 'Project 1',
+          color: 'blue',
+          subcategories: [],
+          jiraKey: null,
+          createdAt: new Date(),
+        }
+      ]
+
+      const mockTasks: Task[] = [
+        {
+          id: 'task1',
+          title: 'Test Task',
+          description: '',
+          status: 'todo',
+          priority: 'medium',
+          projectId: '1',
+          dueDate: null,
+          subcategory: null,
+          jiraKey: null,
+          storyPoints: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          completedAt: null,
+          isArchived: false,
+          archivedAt: null,
+          blockedBy: [],
+          blocking: [],
+        }
+      ]
+
+      const mockTimeEntries: TimeEntry[] = [
+        {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date(),
+          notes: 'Work',
+          type: 'development',
+          createdAt: new Date(),
+        }
+      ]
+
+      const mockComments = []
+      const mockAttachments = []
+      const mockActivities = []
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      } as Response)
+
+      // Mock each endpoint's response
+      let callCount = 0
+      vi.mocked(global.fetch).mockImplementation(async (url) => {
+        if (url === '/api/projects') {
+          return { ok: true, json: async () => mockProjects } as Response
+        }
+        if (url === '/api/tasks') {
+          return { ok: true, json: async () => mockTasks } as Response
+        }
+        if (url === '/api/time-entries') {
+          return { ok: true, json: async () => mockTimeEntries } as Response
+        }
+        if (url === '/api/comments') {
+          return { ok: true, json: async () => mockComments } as Response
+        }
+        if (url === '/api/attachments') {
+          return { ok: true, json: async () => mockAttachments } as Response
+        }
+        if (url === '/api/activities') {
+          return { ok: true, json: async () => mockActivities } as Response
+        }
+        return { ok: false, status: 404, text: async () => 'Not found' } as Response
+      })
+
+      const store = useToolingTrackerStore.getState()
+      await store.loadInitialData()
+
+      const state = useToolingTrackerStore.getState()
+      expect(state.projects).toEqual(mockProjects)
+      expect(state.tasks).toEqual(mockTasks)
+      expect(state.timeEntries).toEqual(mockTimeEntries)
+      expect(state.comments).toEqual(mockComments)
+      expect(state.attachments).toEqual(mockAttachments)
+      expect(state.activities).toEqual(mockActivities)
+      expect(state.isLoading).toBe(false)
+      expect(state.error).toBeNull()
+    })
+
+    it('should set isLoading to true during fetch and false after', async () => {
+      let loadingDuringFetch = false
+
+      vi.mocked(global.fetch).mockImplementation(async (url) => {
+        const currentState = useToolingTrackerStore.getState()
+        if (url === '/api/projects') {
+          loadingDuringFetch = currentState.isLoading
+        }
+        return { ok: true, json: async () => [] } as Response
+      })
+
+      const store = useToolingTrackerStore.getState()
+      await store.loadInitialData()
+
+      expect(loadingDuringFetch).toBe(true)
+      expect(useToolingTrackerStore.getState().isLoading).toBe(false)
+    })
+
+    it('should handle empty database (all arrays returned are empty)', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.loadInitialData()
+
+      const state = useToolingTrackerStore.getState()
+      expect(state.projects).toEqual([])
+      expect(state.tasks).toEqual([])
+      expect(state.timeEntries).toEqual([])
+      expect(state.comments).toEqual([])
+      expect(state.attachments).toEqual([])
+      expect(state.activities).toEqual([])
+      expect(state.error).toBeNull()
+    })
+
+    it('should handle API errors gracefully without failing', async () => {
+      vi.mocked(global.fetch).mockImplementation(async (url) => {
+        if (url === '/api/projects') {
+          return { ok: true, json: async () => [] } as Response
+        }
+        if (url === '/api/tasks') {
+          return { ok: false, status: 500, text: async () => 'Server error' } as Response
+        }
+        return { ok: true, json: async () => [] } as Response
+      })
+
+      const store = useToolingTrackerStore.getState()
+      await store.loadInitialData()
+
+      const state = useToolingTrackerStore.getState()
+      expect(state.error).toBeTruthy()
+      expect(state.isLoading).toBe(false)
+    })
+
+    it('should set error message when fetch fails', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error',
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.loadInitialData()
+
+      const state = useToolingTrackerStore.getState()
+      expect(state.error).toBeTruthy()
+      expect(state.isLoading).toBe(false)
+    })
+
+    it('should clear previous error on successful load', async () => {
+      // Set an initial error
+      useToolingTrackerStore.setState({ error: 'Previous error' })
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.loadInitialData()
+
+      const state = useToolingTrackerStore.getState()
+      expect(state.error).toBeNull()
+    })
+
+    it('should fetch all endpoints exactly once in parallel', async () => {
+      const fetchSpy = vi.spyOn(global, 'fetch')
+
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => [],
+      } as Response)
+
+      const store = useToolingTrackerStore.getState()
+      await store.loadInitialData()
+
+      // Should call 6 endpoints
+      expect(fetchSpy).toHaveBeenCalledTimes(6)
+      expect(fetchSpy).toHaveBeenCalledWith('/api/projects', expect.any(Object))
+      expect(fetchSpy).toHaveBeenCalledWith('/api/tasks', expect.any(Object))
+      expect(fetchSpy).toHaveBeenCalledWith('/api/time-entries', expect.any(Object))
+      expect(fetchSpy).toHaveBeenCalledWith('/api/comments', expect.any(Object))
+      expect(fetchSpy).toHaveBeenCalledWith('/api/attachments', expect.any(Object))
+      expect(fetchSpy).toHaveBeenCalledWith('/api/activities', expect.any(Object))
+
+      fetchSpy.mockRestore()
+    })
+  })
+
+  describe('Phase 3 - Async Task Operations', () => {
+    const mockTask = {
+      id: 'task1',
+      title: 'Test Task',
+      description: 'Test',
+      status: 'todo' as const,
+      priority: 'medium' as const,
+      projectId: 'test-project-1',
+      dueDate: null,
+      subcategory: null,
+      jiraKey: null,
+      storyPoints: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completedAt: null,
+      isArchived: false,
+      archivedAt: null,
+      blockedBy: [],
+      blocking: [],
+    }
+
+    describe('updateTask - async API-backed', () => {
+      it('should call PATCH /api/tasks/:id with updates', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const updatedTask = { ...mockTask, title: 'Updated Title' }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => updatedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.updateTask('task1', { title: 'Updated Title' })
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/tasks/task1',
+          expect.objectContaining({
+            method: 'PATCH',
+            body: JSON.stringify({ title: 'Updated Title' }),
+          })
+        )
+      })
+
+      it('should update task in store from API response', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const updatedTask = { ...mockTask, title: 'Updated Title', updatedAt: new Date() }
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => updatedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.updateTask('task1', { title: 'Updated Title' })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks[0].title).toBe('Updated Title')
+      })
+
+      it('should set error on API failure', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: async () => 'Task not found',
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.updateTask('task1', { title: 'Updated' })
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.error).toBeTruthy()
+        expect(state.isLoading).toBe(false)
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], activities: [] })
+
+        const updatedTask = { ...mockTask, title: 'Updated' }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => updatedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+        
+        await store.updateTask('task1', { title: 'Updated' })
+
+        const state = useToolingTrackerStore.getState()
+        // Activities should NOT be created client-side (API creates them)
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+
+      it('should set loading state during request', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const updatedTask = { ...mockTask, title: 'Updated' }
+        let loadingDuringFetch = false
+
+        vi.mocked(global.fetch).mockImplementation(async () => {
+          loadingDuringFetch = useToolingTrackerStore.getState().isLoading
+          return {
+            ok: true,
+            json: async () => updatedTask,
+          } as Response
+        })
+
+        const store = useToolingTrackerStore.getState()
+        await store.updateTask('task1', { title: 'Updated' })
+
+        expect(loadingDuringFetch).toBe(true)
+        expect(useToolingTrackerStore.getState().isLoading).toBe(false)
+      })
+    })
+
+    describe('deleteTask - async API-backed', () => {
+      it('should call DELETE /api/tasks/:id', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({}),
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.deleteTask('task1')
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/tasks/task1',
+          expect.objectContaining({
+            method: 'DELETE',
+          })
+        )
+      })
+
+      it('should remove task from store after successful delete', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({}),
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        expect(store.tasks).toHaveLength(1)
+
+        await store.deleteTask('task1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks).toHaveLength(0)
+      })
+
+      it('should remove associated time entries on delete', async () => {
+        const timeEntry: TimeEntry = {
+          id: 'time1',
+          taskId: 'task1',
+          hours: 2,
+          minutes: 30,
+          date: new Date(),
+          notes: 'Work',
+          type: 'development',
+          createdAt: new Date(),
+        }
+
+        useToolingTrackerStore.setState({ 
+          tasks: [mockTask],
+          timeEntries: [timeEntry]
+        })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({}),
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.deleteTask('task1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks).toHaveLength(0)
+        expect(state.timeEntries).toHaveLength(0)
+      })
+
+      it('should set error on API failure', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: async () => 'Task not found',
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.deleteTask('task1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.error).toBeTruthy()
+        expect(state.tasks).toHaveLength(1) // Task should NOT be removed on error
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], activities: [] })
+
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({}),
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+        
+        await store.deleteTask('task1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+    })
+
+    describe('moveTask - async API-backed', () => {
+      it('should call PATCH /api/tasks/:id with new status', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const movedTask = { ...mockTask, status: 'in-progress' as const }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => movedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.moveTask('task1', 'in-progress')
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/tasks/task1',
+          expect.objectContaining({
+            method: 'PATCH',
+            body: expect.stringContaining('"status":"in-progress"'),
+          })
+        )
+      })
+
+      it('should set completedAt when status changes to done', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const now = new Date()
+        const completedTask = { ...mockTask, status: 'done' as const, completedAt: now }
+        
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => completedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.moveTask('task1', 'done')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks[0].status).toBe('done')
+        expect(state.tasks[0].completedAt).toBeTruthy()
+      })
+
+      it('should NOT set completedAt if already done', async () => {
+        const doneTask = { ...mockTask, status: 'done' as const, completedAt: new Date('2026-01-10') }
+        useToolingTrackerStore.setState({ tasks: [doneTask] })
+
+        const movedTask = { ...doneTask, status: 'todo' as const, completedAt: new Date('2026-01-10') }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => movedTask,
+        } as Response)
+
+        const originalCompletedAt = doneTask.completedAt
+        const store = useToolingTrackerStore.getState()
+        await store.moveTask('task1', 'todo')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks[0].completedAt).toEqual(originalCompletedAt)
+      })
+
+      it('should NOT create History records client-side', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], history: [] })
+
+        const movedTask = { ...mockTask, status: 'in-progress' as const }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => movedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialHistoryCount = store.history.length
+        
+        await store.moveTask('task1', 'in-progress')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.history.length).toBe(initialHistoryCount)
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], activities: [] })
+
+        const movedTask = { ...mockTask, status: 'in-progress' as const }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => movedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+        
+        await store.moveTask('task1', 'in-progress')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+    })
+
+    describe('archiveTask - async API-backed', () => {
+      it('should call PATCH /api/tasks/:id with isArchived and archivedAt', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const archivedTask = { ...mockTask, isArchived: true, archivedAt: new Date() }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => archivedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.archiveTask('task1')
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/tasks/task1',
+          expect.objectContaining({
+            method: 'PATCH',
+            body: expect.stringContaining('"isArchived":true'),
+          })
+        )
+      })
+
+      it('should update task to archived status in store', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask] })
+
+        const archivedTask = { ...mockTask, isArchived: true, archivedAt: new Date() }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => archivedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.archiveTask('task1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks[0].isArchived).toBe(true)
+        expect(state.tasks[0].archivedAt).toBeTruthy()
+      })
+
+      it('should NOT create Activity records client-side', async () => {
+        useToolingTrackerStore.setState({ tasks: [mockTask], activities: [] })
+
+        const archivedTask = { ...mockTask, isArchived: true, archivedAt: new Date() }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => archivedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        const initialActivityCount = store.activities.length
+        
+        await store.archiveTask('task1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.activities.length).toBe(initialActivityCount)
+      })
+    })
+
+    describe('unarchiveTask - async API-backed', () => {
+      it('should call PATCH /api/tasks/:id with isArchived=false and archivedAt=null', async () => {
+        const archivedTask = { ...mockTask, isArchived: true, archivedAt: new Date() }
+        useToolingTrackerStore.setState({ tasks: [archivedTask] })
+
+        const unarchivedTask = { ...mockTask, isArchived: false, archivedAt: null }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => unarchivedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.unarchiveTask('task1')
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/tasks/task1',
+          expect.objectContaining({
+            method: 'PATCH',
+            body: expect.stringContaining('"isArchived":false'),
+          })
+        )
+      })
+
+      it('should update task to unarchived status in store', async () => {
+        const archivedTask = { ...mockTask, isArchived: true, archivedAt: new Date() }
+        useToolingTrackerStore.setState({ tasks: [archivedTask] })
+
+        const unarchivedTask = { ...mockTask, isArchived: false, archivedAt: null }
+        vi.mocked(global.fetch).mockResolvedValueOnce({
+          ok: true,
+          json: async () => unarchivedTask,
+        } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.unarchiveTask('task1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks[0].isArchived).toBe(false)
+        expect(state.tasks[0].archivedAt).toBeNull()
+      })
+    })
+
+    describe('bulkArchiveTasks - async API-backed', () => {
+      it('should call POST /api/tasks/bulk with operation: archive', async () => {
+        const task2 = { ...mockTask, id: 'task2', title: 'Task 2' }
+        useToolingTrackerStore.setState({ tasks: [mockTask, task2] })
+
+        vi.mocked(global.fetch)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ success: true, affected: 2 }),
+          } as Response)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => [
+              { ...mockTask, isArchived: true, archivedAt: new Date() },
+              { ...task2, isArchived: true, archivedAt: new Date() }
+            ],
+          } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.bulkArchiveTasks(['task1', 'task2'])
+
+        // First call: POST to bulk endpoint
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/tasks/bulk',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ operation: 'archive', taskIds: ['task1', 'task2'] }),
+          })
+        )
+      })
+
+      it('should refresh tasks from database after bulk operation', async () => {
+        const task2 = { ...mockTask, id: 'task2', title: 'Task 2' }
+        useToolingTrackerStore.setState({ tasks: [mockTask, task2] })
+
+        const archivedTasks = [
+          { ...mockTask, isArchived: true, archivedAt: new Date() },
+          { ...task2, isArchived: true, archivedAt: new Date() }
+        ]
+
+        vi.mocked(global.fetch)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ success: true, affected: 2 }),
+          } as Response)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => archivedTasks,
+          } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.bulkArchiveTasks(['task1', 'task2'])
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks.every(t => t.isArchived)).toBe(true)
+      })
+    })
+
+    describe('bulkDeleteTasks - async API-backed', () => {
+      it('should call POST /api/tasks/bulk with operation: delete', async () => {
+        const task2 = { ...mockTask, id: 'task2', title: 'Task 2' }
+        useToolingTrackerStore.setState({ tasks: [mockTask, task2] })
+
+        vi.mocked(global.fetch)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ success: true, affected: 2 }),
+          } as Response)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => [],
+          } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.bulkDeleteTasks(['task1', 'task2'])
+
+        expect(global.fetch).toHaveBeenCalledWith(
+          '/api/tasks/bulk',
+          expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({ operation: 'delete', taskIds: ['task1', 'task2'] }),
+          })
+        )
+      })
+
+      it('should remove tasks from store after bulk delete', async () => {
+        const task2 = { ...mockTask, id: 'task2', title: 'Task 2' }
+        useToolingTrackerStore.setState({ tasks: [mockTask, task2] })
+
+        vi.mocked(global.fetch)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ success: true, affected: 2 }),
+          } as Response)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => [],
+          } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        expect(store.tasks).toHaveLength(2)
+
+        await store.bulkDeleteTasks(['task1', 'task2'])
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks).toHaveLength(0)
+      })
+    })
+
+    describe('addBlocker - async API-backed', () => {
+      it('should call PATCH /api/tasks/:id with updated blocking/blockedBy arrays', async () => {
+        const blocker = { ...mockTask, id: 'blocker1', title: 'Blocker Task' }
+        useToolingTrackerStore.setState({ tasks: [mockTask, blocker] })
+
+        const updatedTask = { ...mockTask, blockedBy: ['blocker1'], blocking: [] }
+        const updatedBlocker = { ...blocker, blocking: ['task1'], blockedBy: [] }
+
+        vi.mocked(global.fetch)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => updatedTask,
+          } as Response)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => updatedBlocker,
+          } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addBlocker('task1', 'blocker1')
+
+        // Should update both tasks
+        expect(global.fetch).toHaveBeenCalledTimes(2)
+      })
+
+      it('should add blockedBy to task and blocking to blocker', async () => {
+        const blocker = { ...mockTask, id: 'blocker1', title: 'Blocker Task' }
+        useToolingTrackerStore.setState({ tasks: [mockTask, blocker] })
+
+        const updatedTask = { ...mockTask, blockedBy: ['blocker1'] }
+        const updatedBlocker = { ...blocker, blocking: ['task1'] }
+
+        vi.mocked(global.fetch)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => updatedTask,
+          } as Response)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => updatedBlocker,
+          } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.addBlocker('task1', 'blocker1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks[0].blockedBy).toContain('blocker1')
+        expect(state.tasks[1].blocking).toContain('task1')
+      })
+    })
+
+    describe('removeBlocker - async API-backed', () => {
+      it('should call PATCH /api/tasks/:id with updated blocking/blockedBy arrays', async () => {
+        const blocker = { ...mockTask, id: 'blocker1', title: 'Blocker Task', blocking: ['task1'] }
+        const blockedTask = { ...mockTask, blockedBy: ['blocker1'] }
+        useToolingTrackerStore.setState({ tasks: [blockedTask, blocker] })
+
+        const updatedTask = { ...blockedTask, blockedBy: [] }
+        const updatedBlocker = { ...blocker, blocking: [] }
+
+        vi.mocked(global.fetch)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => updatedTask,
+          } as Response)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => updatedBlocker,
+          } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.removeBlocker('task1', 'blocker1')
+
+        // Should update both tasks
+        expect(global.fetch).toHaveBeenCalledTimes(2)
+      })
+
+      it('should remove blockedBy from task and blocking from blocker', async () => {
+        const blocker = { ...mockTask, id: 'blocker1', title: 'Blocker', blocking: ['task1'] }
+        const blockedTask = { ...mockTask, blockedBy: ['blocker1'] }
+        useToolingTrackerStore.setState({ tasks: [blockedTask, blocker] })
+
+        const updatedTask = { ...blockedTask, blockedBy: [] }
+        const updatedBlocker = { ...blocker, blocking: [] }
+
+        vi.mocked(global.fetch)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => updatedTask,
+          } as Response)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => updatedBlocker,
+          } as Response)
+
+        const store = useToolingTrackerStore.getState()
+        await store.removeBlocker('task1', 'blocker1')
+
+        const state = useToolingTrackerStore.getState()
+        expect(state.tasks[0].blockedBy).not.toContain('blocker1')
+        expect(state.tasks[1].blocking).not.toContain('task1')
+      })
     })
   })
 })

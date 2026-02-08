@@ -58,7 +58,7 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus = "todo" }:
     }
   }, [task, open, defaultStatus, selectedProjectId, projects])
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim() || !projectId) return
 
     const normalizedSubcategory = subcategory.trim()
@@ -81,13 +81,13 @@ export function TaskDialog({ open, onOpenChange, task, defaultStatus = "todo" }:
     }
 
     if (task) {
-      updateTask(task.id, taskData)
+      await updateTask(task.id, taskData)
     } else {
-      addTask(taskData)
+      await addTask(taskData)
     }
 
     if (normalizedSubcategory) {
-      addSubcategoryToProject(projectId, normalizedSubcategory)
+      await addSubcategoryToProject(projectId, normalizedSubcategory)
     }
 
     onOpenChange(false)

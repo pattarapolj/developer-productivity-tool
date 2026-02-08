@@ -76,10 +76,10 @@ export function KanbanBoard({
     setDragOverColumn(null)
   }
 
-  const handleDrop = (e: React.DragEvent, status: TaskStatus) => {
+  const handleDrop = async (e: React.DragEvent, status: TaskStatus) => {
     e.preventDefault()
     if (draggedTask && draggedTask.status !== status) {
-      moveTask(draggedTask.id, status)
+      await moveTask(draggedTask.id, status)
     }
     setDraggedTask(null)
     setDragOverColumn(null)
@@ -163,8 +163,12 @@ export function KanbanBoard({
                       showProject={!selectedProjectId && !boardFilters.projectId}
                       showArchiveAction={!selectionMode}
                       isArchived={isViewingArchive}
-                      onArchive={() => archiveTask(task.id)}
-                      onUnarchive={() => unarchiveTask(task.id)}
+                      onArchive={async () => {
+                        await archiveTask(task.id)
+                      }}
+                      onUnarchive={async () => {
+                        await unarchiveTask(task.id)
+                      }}
                       className={cn(
                         selectionMode && selectedTasks.has(task.id) && "ring-2 ring-primary",
                         selectionMode && "pl-8",

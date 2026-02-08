@@ -36,6 +36,9 @@ interface ToolingTrackerState {
   isLoading: boolean
   error: string | null
 
+  // Data hydration
+  loadInitialData: () => Promise<void>
+
   // Project actions
   addProject: (name: string, color: ProjectColor, jiraKey?: string | null) => Promise<void>
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>
@@ -48,15 +51,15 @@ interface ToolingTrackerState {
     createdAt?: Date
     completedAt?: Date | null
   }) => Promise<Task | undefined>
-  updateTask: (id: string, updates: Partial<Task>) => void
-  deleteTask: (id: string) => void
-  moveTask: (id: string, status: TaskStatus) => void
+  updateTask: (id: string, updates: Partial<Task>) => Promise<void>
+  deleteTask: (id: string) => Promise<void>
+  moveTask: (id: string, status: TaskStatus) => Promise<void>
   
   // Archive actions
-  archiveTask: (id: string) => void
-  unarchiveTask: (id: string) => void
-  bulkArchiveTasks: (ids: string[]) => void
-  bulkDeleteTasks: (ids: string[]) => void
+  archiveTask: (id: string) => Promise<void>
+  unarchiveTask: (id: string) => Promise<void>
+  bulkArchiveTasks: (ids: string[]) => Promise<void>
+  bulkDeleteTasks: (ids: string[]) => Promise<void>
   autoArchiveOldTasks: (daysOld: number) => number
   
   // Board filter actions
@@ -108,8 +111,8 @@ interface ToolingTrackerState {
   getFormattedHistory: (taskId: string) => HistoryEntry[]
   
   // Task dependencies
-  addBlocker: (taskId: string, blockedByTaskId: string) => void
-  removeBlocker: (taskId: string, blockedByTaskId: string) => void
+  addBlocker: (taskId: string, blockedByTaskId: string) => Promise<void>
+  removeBlocker: (taskId: string, blockedByTaskId: string) => Promise<void>
   getBlockedTasks: () => Task[]
   
   // Seed/Clear data actions
@@ -154,6 +157,76 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       boardFilters: DEFAULT_BOARD_FILTERS,
       isLoading: false,
       error: null,
+
+      loadInitialData: async () => {
+        try {
+          set({ isLoading: true, error: null })
+
+          const results = await Promise.allSettled([
+            apiClient.get<Project[]>('/api/projects'),
+            apiClient.get<Task[]>('/api/tasks'),
+            apiClient.get<TimeEntry[]>('/api/time-entries'),
+            apiClient.get<TaskComment[]>('/api/comments'),
+            apiClient.get<TaskAttachment[]>('/api/attachments'),
+            apiClient.get<Activity[]>('/api/activities'),
+            // NOTE: history is NOT loaded from API - it's generated from activity logs
+            // If history should be persisted separately, implement /api/history endpoint
+          ])
+
+          // Extract successful results - allow partial hydration if some endpoints fail
+          const [projectsResult, tasksResult, timeEntriesResult, commentsResult, attachmentsResult, activitiesResult] = results
+
+          const newState: Partial<ToolingTrackerState> = {
+            isLoading: false,
+          }
+
+          // Set successful results
+          if (projectsResult.status === 'fulfilled') {
+            newState.projects = projectsResult.value
+          }
+          if (tasksResult.status === 'fulfilled') {
+            newState.tasks = tasksResult.value
+          }
+          if (timeEntriesResult.status === 'fulfilled') {
+            newState.timeEntries = timeEntriesResult.value
+          }
+          if (commentsResult.status === 'fulfilled') {
+            newState.comments = commentsResult.value
+          }
+          if (attachmentsResult.status === 'fulfilled') {
+            newState.attachments = attachmentsResult.value
+          }
+          if (activitiesResult.status === 'fulfilled') {
+            newState.activities = activitiesResult.value
+          }
+
+          // Set error if ANY endpoint failed
+          const failedResults = results.filter(r => r.status === 'rejected')
+          if (failedResults.length > 0) {
+            const errors = failedResults
+              .map((r, i) => {
+                const endpoints = [
+                  '/api/projects',
+                  '/api/tasks',
+                  '/api/time-entries',
+                  '/api/comments',
+                  '/api/attachments',
+                  '/api/activities',
+                ]
+                const endpoint = endpoints[results.indexOf(r)]
+                return `${endpoint} failed`
+              })
+              .join(', ')
+            newState.error = `Partial load: ${errors}. Some data may be missing.`
+          }
+
+          set(newState)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to load initial data'
+          set({ error: message, isLoading: false })
+          console.error('Failed to load initial data:', error)
+        }
+      },
 
       addProject: async (name, color, jiraKey) => {
         if (!name?.trim()) {
@@ -275,170 +348,140 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         }
       },
 
-      updateTask: (id, updates) => {
-        const task = get().tasks.find(t => t.id === id)
-        if (!task) return
-        
-        const now = new Date()
-        const historyEntries: TaskHistory[] = []
-        
-        // Track field changes
-        Object.keys(updates).forEach(key => {
-          const oldValue = String(task[key as keyof Task] ?? '')
-          const newValue = String(updates[key as keyof Task] ?? '')
-          if (oldValue !== newValue) {
-            historyEntries.push({
-              id: generateId(),
-              taskId: id,
-              field: key,
-              oldValue,
-              newValue,
-              changedAt: now,
-            })
-          }
-        })
-        
-        // Check if status changed to done
-        const completedAt = updates.status === 'done' && task.status !== 'done' ? now : task.completedAt
-        
-        // Log activity if status changed
-        let activity = null
-        if (updates.status && updates.status !== task.status) {
-          activity = {
-            id: generateId(),
-            taskId: id,
-            type: 'task_status_changed' as const,
-            description: `Status changed from ${task.status} to ${updates.status}`,
-            metadata: { oldStatus: task.status, newStatus: updates.status },
-            createdAt: now,
-          }
-        } else {
-          activity = {
-            id: generateId(),
-            taskId: id,
-            type: 'task_updated' as const,
-            description: `Task updated`,
-            metadata: updates,
-            createdAt: now,
-          }
+      updateTask: async (id, updates) => {
+        try {
+          set({ isLoading: true, error: null })
+          
+          const updatedTask = await apiClient.patch<Task>(`/api/tasks/${id}`, updates)
+          
+          set((state) => ({
+            tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to update task'
+          set({ error: message, isLoading: false })
+          console.error('Failed to update task:', error)
         }
-        
-        set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates, completedAt, updatedAt: now } : t)),
-          history: [...state.history, ...historyEntries],
-          activities: activity ? [...state.activities, activity] : state.activities,
-        }))
       },
 
-      deleteTask: (id) => {
-        const task = get().tasks.find(t => t.id === id)
-        if (!task) return
-        
-        const activity = {
-          id: generateId(),
-          taskId: id,
-          type: 'task_deleted' as const,
-          description: `Task "${task.title}" deleted`,
-          metadata: { title: task.title },
-          createdAt: new Date(),
+      deleteTask: async (id) => {
+        try {
+          set({ isLoading: true, error: null })
+          
+          await apiClient.delete(`/api/tasks/${id}`)
+          
+          set((state) => ({
+            tasks: state.tasks.filter((t) => t.id !== id),
+            timeEntries: state.timeEntries.filter((te) => te.taskId !== id),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to delete task'
+          set({ error: message, isLoading: false })
+          console.error('Failed to delete task:', error)
         }
-        
-        set((state) => ({
-          tasks: state.tasks.filter((t) => t.id !== id),
-          timeEntries: state.timeEntries.filter((te) => te.taskId !== id),
-          activities: [...state.activities, activity],
-        }))
       },
 
-      moveTask: (id, status) => {
-        const task = get().tasks.find(t => t.id === id)
-        if (!task) return
-        
-        const now = new Date()
-        const completedAt = status === 'done' && task.status !== 'done' ? now : task.completedAt
-        
-        const activity = {
-          id: generateId(),
-          taskId: id,
-          type: 'task_status_changed' as const,
-          description: `Status changed from ${task.status} to ${status}`,
-          metadata: { oldStatus: task.status, newStatus: status },
-          createdAt: now,
+      moveTask: async (id, status) => {
+        try {
+          set({ isLoading: true, error: null })
+          
+          const updates: Partial<Task> = { status }
+          if (status === 'done') {
+            updates.completedAt = new Date()
+          }
+          
+          const updatedTask = await apiClient.patch<Task>(`/api/tasks/${id}`, updates)
+          
+          set((state) => ({
+            tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to move task'
+          set({ error: message, isLoading: false })
+          console.error('Failed to move task:', error)
         }
-        
-        const historyEntry = {
-          id: generateId(),
-          taskId: id,
-          field: 'status',
-          oldValue: task.status,
-          newValue: status,
-          changedAt: now,
-        }
-        
-        set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === id ? { ...t, status, completedAt, updatedAt: now } : t)),
-          activities: [...state.activities, activity],
-          history: [...state.history, historyEntry],
-        }))
       },
 
       // Archive actions
-      archiveTask: (id) => {
-        const task = get().tasks.find(t => t.id === id)
-        if (!task) return
-        
-        const now = new Date()
-        const activity = {
-          id: generateId(),
-          taskId: id,
-          type: 'task_archived' as const,
-          description: `Task "${task.title}" archived`,
-          createdAt: now,
+      archiveTask: async (id) => {
+        try {
+          set({ isLoading: true, error: null })
+          
+          const updatedTask = await apiClient.patch<Task>(`/api/tasks/${id}`, {
+            isArchived: true,
+            archivedAt: new Date(),
+          })
+          
+          set((state) => ({
+            tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to archive task'
+          set({ error: message, isLoading: false })
+          console.error('Failed to archive task:', error)
         }
-        
-        set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === id ? { ...t, isArchived: true, archivedAt: now, updatedAt: now } : t
-          ),
-          activities: [...state.activities, activity],
-        }))
       },
 
-      unarchiveTask: (id) => {
-        const task = get().tasks.find(t => t.id === id)
-        if (!task) return
-        
-        const now = new Date()
-        const activity = {
-          id: generateId(),
-          taskId: id,
-          type: 'task_unarchived' as const,
-          description: `Task "${task.title}" restored from archive`,
-          createdAt: now,
+      unarchiveTask: async (id) => {
+        try {
+          set({ isLoading: true, error: null })
+          
+          const updatedTask = await apiClient.patch<Task>(`/api/tasks/${id}`, {
+            isArchived: false,
+            archivedAt: null,
+          })
+          
+          set((state) => ({
+            tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to unarchive task'
+          set({ error: message, isLoading: false })
+          console.error('Failed to unarchive task:', error)
         }
-        
-        set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.id === id ? { ...t, isArchived: false, archivedAt: null, updatedAt: now } : t
-          ),
-          activities: [...state.activities, activity],
-        }))
       },
 
-      bulkArchiveTasks: (ids) => {
-        const now = new Date()
-        set((state) => ({
-          tasks: state.tasks.map((t) =>
-            ids.includes(t.id) ? { ...t, isArchived: true, archivedAt: now, updatedAt: now } : t
-          ),
-        }))
+      bulkArchiveTasks: async (ids) => {
+        try {
+          set({ isLoading: true, error: null })
+          
+          await apiClient.post('/api/tasks/bulk', {
+            operation: 'archive',
+            taskIds: ids,
+          })
+          
+          // Refresh all tasks from database after bulk operation
+          const tasks = await apiClient.get<Task[]>('/api/tasks')
+          set({ tasks, isLoading: false })
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to archive tasks'
+          set({ error: message, isLoading: false })
+          console.error('Failed to archive tasks:', error)
+        }
       },
 
-      bulkDeleteTasks: (ids) => {
-        set((state) => ({
-          tasks: state.tasks.filter((t) => !ids.includes(t.id)),
-          timeEntries: state.timeEntries.filter((te) => !ids.includes(te.taskId)),
-        }))
+      bulkDeleteTasks: async (ids) => {
+        try {
+          set({ isLoading: true, error: null })
+          
+          await apiClient.post('/api/tasks/bulk', {
+            operation: 'delete',
+            taskIds: ids,
+          })
+          
+          // Refresh all tasks from database after bulk operation
+          const tasks = await apiClient.get<Task[]>('/api/tasks')
+          set({ tasks, isLoading: false })
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to delete tasks'
+          set({ error: message, isLoading: false })
+          console.error('Failed to delete tasks:', error)
+        }
       },
 
       autoArchiveOldTasks: (daysOld) => {
@@ -1338,32 +1381,94 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       },
 
       // Task dependencies
-      addBlocker: (taskId, blockedByTaskId) => {
-        set((state) => ({
-          tasks: state.tasks.map((t) => {
-            if (t.id === taskId) {
-              return { ...t, blockedBy: [...(t.blockedBy || []), blockedByTaskId] }
-            }
-            if (t.id === blockedByTaskId) {
-              return { ...t, blocking: [...(t.blocking || []), taskId] }
-            }
-            return t
-          }),
-        }))
+      addBlocker: async (taskId, blockedByTaskId) => {
+        try {
+          set({ isLoading: true, error: null })
+          
+          // Get current task to update its blockedBy array
+          const task = get().tasks.find(t => t.id === taskId)
+          if (!task) {
+            set({ error: 'Task not found', isLoading: false })
+            return
+          }
+          
+          // Get blocker task to update its blocking array
+          const blockerTask = get().tasks.find(t => t.id === blockedByTaskId)
+          if (!blockerTask) {
+            set({ error: 'Blocker task not found', isLoading: false })
+            return
+          }
+          
+          // Update task being blocked
+          const updatedBlockedBy = task.blockedBy ? [...task.blockedBy, blockedByTaskId] : [blockedByTaskId]
+          const updatedTask = await apiClient.patch<Task>(`/api/tasks/${taskId}`, {
+            blockedBy: updatedBlockedBy,
+          })
+          
+          // Update blocking task
+          const updatedBlocking = blockerTask.blocking ? [...blockerTask.blocking, taskId] : [taskId]
+          const updatedBlockerTask = await apiClient.patch<Task>(`/api/tasks/${blockedByTaskId}`, {
+            blocking: updatedBlocking,
+          })
+          
+          set((state) => ({
+            tasks: state.tasks.map((t) => {
+              if (t.id === taskId) return updatedTask
+              if (t.id === blockedByTaskId) return updatedBlockerTask
+              return t
+            }),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to add blocker'
+          set({ error: message, isLoading: false })
+          console.error('Failed to add blocker:', error)
+        }
       },
 
-      removeBlocker: (taskId, blockedByTaskId) => {
-        set((state) => ({
-          tasks: state.tasks.map((t) => {
-            if (t.id === taskId) {
-              return { ...t, blockedBy: (t.blockedBy || []).filter(id => id !== blockedByTaskId) }
-            }
-            if (t.id === blockedByTaskId) {
-              return { ...t, blocking: (t.blocking || []).filter(id => id !== taskId) }
-            }
-            return t
-          }),
-        }))
+      removeBlocker: async (taskId, blockedByTaskId) => {
+        try {
+          set({ isLoading: true, error: null })
+          
+          // Get current task to update its blockedBy array
+          const task = get().tasks.find(t => t.id === taskId)
+          if (!task) {
+            set({ error: 'Task not found', isLoading: false })
+            return
+          }
+          
+          // Get blocker task to update its blocking array
+          const blockerTask = get().tasks.find(t => t.id === blockedByTaskId)
+          if (!blockerTask) {
+            set({ error: 'Blocker task not found', isLoading: false })
+            return
+          }
+          
+          // Update task being unblocked
+          const updatedBlockedBy = task.blockedBy ? task.blockedBy.filter(id => id !== blockedByTaskId) : []
+          const updatedTask = await apiClient.patch<Task>(`/api/tasks/${taskId}`, {
+            blockedBy: updatedBlockedBy,
+          })
+          
+          // Update blocking task
+          const updatedBlocking = blockerTask.blocking ? blockerTask.blocking.filter(id => id !== taskId) : []
+          const updatedBlockerTask = await apiClient.patch<Task>(`/api/tasks/${blockedByTaskId}`, {
+            blocking: updatedBlocking,
+          })
+          
+          set((state) => ({
+            tasks: state.tasks.map((t) => {
+              if (t.id === taskId) return updatedTask
+              if (t.id === blockedByTaskId) return updatedBlockerTask
+              return t
+            }),
+            isLoading: false,
+          }))
+        } catch (error) {
+          const message = error instanceof APIError ? error.message : 'Failed to remove blocker'
+          set({ error: message, isLoading: false })
+          console.error('Failed to remove blocker:', error)
+        }
       },
 
       getBlockedTasks: () => {
@@ -1414,6 +1519,12 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
     }),
     {
       name: "ToolingTracker-storage",
+      // Only persist UI state to localStorage, not data from database
+      // This prevents race conditions where stale UI state overwrites fresh API data
+      partialize: (state) => ({
+        selectedProjectId: state.selectedProjectId,
+        boardFilters: state.boardFilters,
+      }),
       // Migrate old data to include new fields
       migrate: (persistedState: unknown) => {
         const state = persistedState as ToolingTrackerState

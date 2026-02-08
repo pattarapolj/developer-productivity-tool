@@ -69,6 +69,10 @@ export async function PATCH(
     if (body.subcategory !== undefined) updateData.subcategory = body.subcategory?.trim() || null
     if (body.jiraKey !== undefined) updateData.jiraKey = body.jiraKey?.trim() || null
     if (body.storyPoints !== undefined) updateData.storyPoints = body.storyPoints || null
+    if (body.isArchived !== undefined) updateData.isArchived = body.isArchived
+    if (body.archivedAt !== undefined) updateData.archivedAt = body.archivedAt ? new Date(body.archivedAt) : null
+    if (body.blockedBy !== undefined) updateData.blockedBy = JSON.stringify(body.blockedBy || [])
+    if (body.blocking !== undefined) updateData.blocking = JSON.stringify(body.blocking || [])
 
     // Update task
     const task = await prisma.task.update({

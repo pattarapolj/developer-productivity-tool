@@ -142,7 +142,12 @@ export function TaskCard({
                 </>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => deleteTask(task.id)} className="text-destructive">
+              <DropdownMenuItem 
+                onClick={async () => {
+                  await deleteTask(task.id)
+                }} 
+                className="text-destructive"
+              >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </DropdownMenuItem>

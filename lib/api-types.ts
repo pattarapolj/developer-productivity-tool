@@ -174,6 +174,10 @@ export interface UpdateTaskRequest {
   subcategory?: string | null
   jiraKey?: string | null
   storyPoints?: number | null
+  isArchived?: boolean
+  archivedAt?: string | null // ISO date
+  blockedBy?: string[] // Task IDs that block this task
+  blocking?: string[] // Task IDs that this task blocks
 }
 
 /**
