@@ -95,6 +95,13 @@ This is my personal project to build a comprehensive productivity tracking tool 
 - **Accessibility-first**: Keyboard navigation, ARIA labels, screen reader support
 - **shadcn/ui components**: Beautiful, accessible, and customizable
 
+### 💾 Persistent Data Storage
+- **SQLite database** for reliable local storage
+- **Automatic persistence**: All changes automatically saved to database
+- **Zero data loss**: Data survives application restarts and crashes
+- **Backup friendly**: Easy database file backup and migration
+- **Future-ready**: Schema supports easy migration to PostgreSQL for multi-user deployments
+
 ---
 
 ## 📸 Screenshots
@@ -141,9 +148,10 @@ This is my personal project to build a comprehensive productivity tracking tool 
 - **[date-fns](https://date-fns.org/)**: Modern date utility library
 - **[ExcelJS](https://github.com/exceljs/exceljs)**: Excel export functionality
 
-### Database (Future)
-- **[Prisma](https://www.prisma.io/)**: Type-safe ORM
-- **SQLite**: Local database (schema ready, not yet integrated)
+### Database & Storage
+- **[Prisma](https://www.prisma.io/)**: Type-safe ORM with automatic migrations
+- **SQLite**: Local persistent database for all data (projects, tasks, time entries, activities)
+- **Automatic Persistence**: All data changes automatically sync to database
 
 ### Testing
 - **[Vitest](https://vitest.dev/)**: Fast unit testing framework (317 tests, 94% passing)
@@ -198,17 +206,47 @@ pnpm build
 pnpm start
 ```
 
-### Database Setup (Optional - Future)
+### Database Setup
 
-The Prisma schema is ready but not yet integrated. To set up the database:
+This application uses **SQLite** for persistent data storage. All your projects, tasks, time entries, and activities are automatically saved to a local database file.
 
+#### Initial Database Setup
+
+1. **Initialize the database** (run automatically on first access, or manually):
+   ```bash
+   pnpm db:push
+   ```
+
+2. **(Optional) Open Prisma Studio** to view/manage your data:
+   ```bash
+   pnpm db:studio
+   ```
+   This opens a GUI at `http://localhost:5555` where you can browse and edit data directly.
+
+#### Database Commands
+
+- **`pnpm db:push`** - Sync Prisma schema to SQLite database (creates `prisma/dev.db` if not exists)
+- **`pnpm db:studio`** - Open Prisma Studio GUI to view and manage data
+- **`pnpm db:reset`** - ⚠️ Reset database completely (warning: deletes all data)
+
+#### Database Location & Backup
+
+The SQLite database file is stored at: **`prisma/dev.db`**
+
+**Backup your data:**
 ```bash
-# Sync Prisma schema to SQLite
-pnpm db:push
-
-# Open Prisma Studio GUI
-pnpm db:studio
+# Copy the database file to create a backup
+cp prisma/dev.db prisma/dev.db.backup
 ```
+
+**Restore from backup:**
+```bash
+# Replace current database with backup
+cp prisma/dev.db.backup prisma/dev.db
+```
+
+**Migrate to another machine:**
+Simply copy the `prisma/dev.db` file to another machine's `prisma/` directory, and the data will be available there.
 
 ---
 
@@ -305,8 +343,11 @@ pnpm test:ui
 # Install Playwright browsers (first time only)
 pnpm exec playwright install chromium
 
-# Run E2E tests
+# Run all E2E tests
 pnpm exec playwright test
+
+# Run database persistence tests
+pnpm exec playwright test e2e/database-persistence.spec.ts
 
 # Run E2E tests with UI
 pnpm exec playwright test --ui
@@ -320,6 +361,11 @@ pnpm exec playwright test e2e/functional.spec.ts
 - **Unit Tests**: 317 tests, 298 passing (94%)
   - Components: Task cards, dialogs, boards, analytics
   - Utils: Date formatting, color helpers, filtering
+
+- **E2E Tests**: 8+ tests covering:
+  - **Database Persistence**: Full user workflows, data integrity, concurrent operations
+  - **Functional**: Task CRUD, drag-and-drop, time tracking
+  - **Integration**: Multi-tab sync, offline recovery, data consistency
   - Store: State management, actions, persistence
 
 - **E2E Tests**: 9 tests, 7 passing (100% of active tests)
