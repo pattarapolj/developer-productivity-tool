@@ -26,7 +26,12 @@ export class APIError extends Error {
  * @param value - ISO date string or Date object from Prisma
  * @returns Date object or null if input is null/undefined
  */
-export const transformDateFromDB = (value: string | Date | null | undefined): Date | null => {
+// Overload: non-null input returns non-null Date
+export function transformDateFromDB(value: string | Date): Date
+// Overload: nullable input returns nullable Date
+export function transformDateFromDB(value: string | Date | null | undefined): Date | null
+// Implementation
+export function transformDateFromDB(value: string | Date | null | undefined): Date | null {
   if (!value) return null
   return value instanceof Date ? value : new Date(value)
 }
@@ -36,7 +41,12 @@ export const transformDateFromDB = (value: string | Date | null | undefined): Da
  * @param date - Date object from client
  * @returns ISO date string or null if input is null/undefined
  */
-export const transformDateToDB = (date: Date | null | undefined): string | null => {
+// Overload: non-null Date returns non-null string
+export function transformDateToDB(date: Date): string
+// Overload: nullable Date returns nullable string
+export function transformDateToDB(date: Date | null | undefined): string | null
+// Implementation
+export function transformDateToDB(date: Date | null | undefined): string | null {
   if (!date) return null
   return date.toISOString()
 }

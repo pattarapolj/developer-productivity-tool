@@ -52,8 +52,8 @@ export interface PrismaTask {
   id: string
   title: string
   description: string
-  status: 'backlog' | 'todo' | 'in-progress' | 'done'
-  priority: 'low' | 'medium' | 'high'
+  status: string // 'backlog' | 'todo' | 'in-progress' | 'done' (stored as string in DB)
+  priority: string // 'low' | 'medium' | 'high' (stored as string in DB)
   projectId: string
   dueDate: string | Date | null // ISO date or Date object
   subcategory: string | null

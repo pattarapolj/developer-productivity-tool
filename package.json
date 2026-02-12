@@ -11,6 +11,9 @@
     "test:run": "vitest run",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "db:generate": "prisma generate",
+    "setup": "pnpm install && prisma generate && prisma db push",
+    "start:dev": "pnpm setup && pnpm dev",
     "start": "next start"
   },
   "dependencies": {
@@ -65,6 +68,7 @@
     "react-hook-form": "^7.60.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "latest",
+    "rimraf": "^6.1.2",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
