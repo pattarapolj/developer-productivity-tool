@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useState, useMemo, useCallback } from 'react'
+import { use, useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToolingTrackerStore } from '@/lib/store'
 import { useAutoSave } from '@/hooks/use-auto-save'
@@ -19,11 +19,17 @@ export default function WhiteboardEdit({
   const store = useToolingTrackerStore()
   const [mounted, setMounted] = useState(false)
   const [isPresenting, setIsPresenting] = useState(false)
+  const lastSavedContentRef = useRef<string | null>(null)
 
   // Derive board from store using useMemo
   const board = useMemo(() => {
     if (!mounted) return null
-    return store.boards.find((b) => b.id === boardId) || null
+    const foundBoard = store.boards.find((b) => b.id === boardId) || null
+    // Initialize last saved content reference
+    if (foundBoard && lastSavedContentRef.current === null) {
+      lastSavedContentRef.current = foundBoard.content
+    }
+    return foundBoard
   }, [mounted, boardId, store.boards])
 
   // Create auto-save handler
@@ -31,6 +37,8 @@ export default function WhiteboardEdit({
     async (serializedContent: string) => {
       try {
         await store.updateBoard(boardId, { content: serializedContent })
+        // Update the last saved content after successful save
+        lastSavedContentRef.current = serializedContent
       } catch (error) {
         console.error('Failed to save board:', error)
         throw error
@@ -39,16 +47,19 @@ export default function WhiteboardEdit({
     [boardId, store]
   )
 
-  // Use the auto-save hook with 500ms debounce (more responsive)
+  // Use the auto-save hook with 2000ms debounce to reduce server load and UI flashing
   const { save: saveBoard, status: saveStatus, error: saveError } = useAutoSave(
     handleSave,
-    500 // 500ms debounce for better responsiveness
+    2000 // 2 second debounce to batch rapid changes
   )
 
   // Handler for content changes from editor
   const handleEditorChange = useCallback(
     (newContent: string) => {
-      saveBoard(newContent)
+      // Only trigger save if content has actually changed
+      if (newContent !== lastSavedContentRef.current) {
+        saveBoard(newContent)
+      }
     },
     [saveBoard]
   )
@@ -124,18 +135,18 @@ export default function WhiteboardEdit({
               </div>
             </div>
 
-            {/* Auto-Save Status Indicator */}
-            <div className="flex items-center gap-2">
+            {/* Auto-Save Status Indicator - Only show during active saving or errors */}
+            <div className="flex items-center gap-2 min-w-[140px] justify-end">
               {saveStatus === 'saving' && (
-                <div className="flex items-center gap-2 text-blue-400">
+                <div className="flex items-center gap-2 text-blue-400 transition-opacity duration-200">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="text-sm">Saving...</span>
                 </div>
               )}
               {saveStatus === 'saved' && (
-                <div className="flex items-center gap-2 text-green-400">
+                <div className="flex items-center gap-2 text-green-400 transition-opacity duration-200 animate-in fade-in">
                   <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm">All changes saved</span>
+                  <span className="text-sm">Saved</span>
                 </div>
               )}
               {saveStatus === 'error' && (
