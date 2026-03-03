@@ -23,6 +23,8 @@ export interface Board {
   isArchived: boolean
 }
 
+
+
 export interface Task {
   id: string
   title: string
@@ -106,9 +108,9 @@ export interface TaskWithTime extends Task {
   project?: Project
 }
 
-export type ActivityType = 
+export type ActivityType =
   | "task_created"
-  | "task_updated" 
+  | "task_updated"
   | "task_status_changed"
   | "task_archived"
   | "task_unarchived"

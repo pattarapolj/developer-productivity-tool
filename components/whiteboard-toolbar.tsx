@@ -1,5 +1,3 @@
-'use client'
-
 import { Download, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -64,6 +62,8 @@ export function WhiteboardToolbar({
         <Play className="h-4 w-4 mr-2" />
         Present
       </Button>
+
     </div>
   )
 }
+

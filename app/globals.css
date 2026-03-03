@@ -147,3 +147,443 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ============================
+   TipTap Editor Styles
+   ============================ */
+
+/* Placeholder */
+.notion-editor .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted-foreground);
+  opacity: 0.4;
+  pointer-events: none;
+  height: 0;
+}
+
+.notion-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+}
+
+.notion-editor .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted-foreground);
+  opacity: 0.3;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Headings */
+.notion-editor h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 1.5em 0 0.5em;
+  line-height: 1.2;
+}
+
+.notion-editor h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin: 1.25em 0 0.4em;
+  line-height: 1.3;
+}
+
+.notion-editor h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 1em 0 0.3em;
+  line-height: 1.4;
+}
+
+/* Paragraphs */
+.notion-editor p {
+  margin: 0.4em 0;
+  line-height: 1.7;
+}
+
+/* Lists */
+.notion-editor ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin: 0.4em 0;
+}
+
+.notion-editor ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin: 0.4em 0;
+}
+
+.notion-editor li {
+  margin: 0.15em 0;
+}
+
+.notion-editor li p {
+  margin: 0;
+}
+
+/* Task list */
+.notion-editor ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.notion-editor ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+}
+
+.notion-editor ul[data-type="taskList"] li>label {
+  flex-shrink: 0;
+  margin-top: 0.2em;
+}
+
+.notion-editor ul[data-type="taskList"] li>label input[type="checkbox"] {
+  appearance: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid var(--border);
+  border-radius: 0.25rem;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 150ms;
+  position: relative;
+}
+
+.notion-editor ul[data-type="taskList"] li>label input[type="checkbox"]:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.notion-editor ul[data-type="taskList"] li>label input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.7rem;
+  color: var(--primary-foreground);
+  font-weight: bold;
+}
+
+.notion-editor ul[data-type="taskList"] li>label input[type="checkbox"]:hover {
+  border-color: var(--primary);
+}
+
+.notion-editor ul[data-type="taskList"] li[data-checked="true"]>div>p {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+/* Blockquote */
+.notion-editor blockquote {
+  border-left: 3px solid var(--primary);
+  padding-left: 1em;
+  margin: 1em 0;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+/* Horizontal rule */
+.notion-editor hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5em 0;
+}
+
+/* Inline code */
+.notion-editor code:not(pre code) {
+  background-color: var(--muted);
+  border-radius: 0.25rem;
+  padding: 0.15em 0.35em;
+  font-size: 0.9em;
+  font-family: var(--font-mono);
+  color: var(--primary);
+}
+
+/* Code block */
+.notion-editor pre {
+  background-color: oklch(0.15 0.01 260);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.notion-editor pre code {
+  font-family: var(--font-mono);
+  color: var(--foreground);
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Syntax highlighting (lowlight) */
+.notion-editor .hljs-keyword {
+  color: oklch(0.7 0.18 300);
+}
+
+.notion-editor .hljs-string {
+  color: oklch(0.75 0.15 145);
+}
+
+.notion-editor .hljs-comment {
+  color: oklch(0.5 0 0);
+  font-style: italic;
+}
+
+.notion-editor .hljs-number {
+  color: oklch(0.75 0.18 55);
+}
+
+.notion-editor .hljs-function {
+  color: oklch(0.75 0.15 250);
+}
+
+.notion-editor .hljs-built_in {
+  color: oklch(0.75 0.15 175);
+}
+
+.notion-editor .hljs-title {
+  color: oklch(0.8 0.15 85);
+}
+
+.notion-editor .hljs-attr {
+  color: oklch(0.75 0.15 175);
+}
+
+.notion-editor .hljs-params {
+  color: oklch(0.75 0.18 55);
+}
+
+/* Link */
+.notion-editor a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: opacity 150ms;
+}
+
+.notion-editor a:hover {
+  opacity: 0.8;
+}
+
+/* Highlight */
+.notion-editor mark {
+  background-color: oklch(0.75 0.15 175 / 0.2);
+  border-radius: 0.2em;
+  padding: 0.05em 0.2em;
+}
+
+/* Image */
+.notion-editor img {
+  border-radius: 0.75rem;
+  max-width: 100%;
+  height: auto;
+  margin: 1em 0;
+}
+
+/* Callout content styling */
+.callout-content p {
+  margin: 0;
+}
+
+/* Excalidraw import fix */
+.excalidraw-embed .excalidraw {
+  --color-primary: var(--primary) !important;
+}
+
+/* Selection styling */
+.notion-editor .ProseMirror-selectednode {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* Drag handle styling */
+.notion-editor .ProseMirror-gapcursor::after {
+  border-top: 1px solid var(--primary);
+}
+
+/* ============================
+   Drag Handle
+   ============================ */
+
+.drag-handle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 150ms ease, transform 150ms ease;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.drag-handle-wrapper.dragging {
+  opacity: 0.3 !important;
+}
+
+.drag-handle-grip,
+.drag-handle-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: grab;
+  opacity: 0.5;
+  transition: all 150ms ease;
+  padding: 0;
+}
+
+.drag-handle-grip:hover,
+.drag-handle-add:hover {
+  background-color: var(--muted);
+  color: var(--foreground);
+  opacity: 1;
+}
+
+.drag-handle-grip:active {
+  cursor: grabbing;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  opacity: 1;
+}
+
+.drag-handle-add {
+  cursor: pointer;
+}
+
+/* Drag Handle Context Menu */
+/* Drag Handle Context Menu */
+.drag-handle-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background-color: var(--popover);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  animation: menuSlideIn 100ms ease-out;
+  z-index: 50;
+}
+
+@keyframes menuSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.drag-handle-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 100ms;
+}
+
+.drag-handle-menu button:hover {
+  background-color: var(--muted);
+}
+
+.drag-handle-menu .separator {
+  height: 1px;
+  background-color: var(--border);
+  margin: 4px 0;
+}
+
+/* ============================
+   Multi-Column Layout
+   ============================ */
+
+.columns-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--col-count, 2), 1fr);
+  gap: 12px;
+  margin: 1rem 0;
+  border-radius: 0.75rem;
+  padding: 4px;
+}
+
+.columns-grid:hover {
+  background-color: oklch(0.5 0 0 / 0.03);
+}
+
+.column-node {
+  border: 1.5px dashed transparent;
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-height: 60px;
+  transition: border-color 200ms, background-color 200ms;
+}
+
+.columns-grid:hover .column-node {
+  border-color: oklch(0.6 0 0 / 0.15);
+}
+
+.column-node:focus-within {
+  border-color: var(--primary);
+  background-color: oklch(from var(--primary) l c h / 0.04);
+}
+
+.column-node>*:first-child {
+  margin-top: 0;
+}
+
+.column-node>*:last-child {
+  margin-bottom: 0;
+}
+
+/* ProseMirror drop cursor */
+.ProseMirror-dropcursor {
+  border-color: var(--primary) !important;
+  border-width: 2px !important;
+  border-radius: 1px;
+}
+
+.vertical-drop-cursor {
+  position: absolute;
+  width: 4px;
+  background-color: var(--primary);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 50;
+  transition: opacity 0.1s;
+}
+
+/* Dragging state for custom blocks */
+.notion-editor [draggable="true"] {
+  transition: box-shadow 150ms ease;
+}
+
+.notion-editor .ProseMirror-selectednode[draggable="true"] {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}

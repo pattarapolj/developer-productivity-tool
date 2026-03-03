@@ -1,12 +1,12 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import type { 
-  Project, 
-  Task, 
-  TimeEntry, 
-  ProjectColor, 
-  TaskStatus, 
-  Priority, 
+import type {
+  Project,
+  Task,
+  TimeEntry,
+  ProjectColor,
+  TaskStatus,
+  Priority,
   BoardFilters,
   Activity,
   TaskComment,
@@ -20,7 +20,8 @@ import type {
   HistoryEntry,
   ComparisonPeriod,
   ComparisonData,
-  Board
+  Board,
+
 } from "./types"
 import { apiClient, APIError } from "./api-utils"
 
@@ -33,6 +34,7 @@ interface ToolingTrackerState {
   attachments: TaskAttachment[]
   history: TaskHistory[]
   boards: Board[]
+
   selectedProjectId: string | null
   boardFilters: BoardFilters
   isLoading: boolean
@@ -56,14 +58,14 @@ interface ToolingTrackerState {
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   moveTask: (id: string, status: TaskStatus) => Promise<void>
-  
+
   // Archive actions
   archiveTask: (id: string) => Promise<void>
   unarchiveTask: (id: string) => Promise<void>
   bulkArchiveTasks: (ids: string[]) => Promise<void>
   bulkDeleteTasks: (ids: string[]) => Promise<void>
   autoArchiveOldTasks: (daysOld: number) => number
-  
+
   // Board filter actions
   setBoardFilters: (filters: Partial<BoardFilters>) => void
   resetBoardFilters: () => void
@@ -74,6 +76,8 @@ interface ToolingTrackerState {
   deleteBoard: (id: string) => Promise<void>
   archiveBoard: (id: string) => Promise<void>
   getBoardsForProject: (projectId: string) => Board[]
+
+
 
   // Time entry actions
   addTimeEntry: (entry: Omit<TimeEntry, "id" | "createdAt">) => Promise<void>
@@ -97,41 +101,41 @@ interface ToolingTrackerState {
   getVelocityData: (weeksBack: number) => VelocityWeekData[]
   getAverageCycleTime: (projectId?: string) => number
   getTaskEfficiencyMetrics: () => TaskEfficiencyMetrics
-  
+
   // Activity actions
   addActivity: (activity: Omit<Activity, "id" | "createdAt">) => void
   getActivitiesForTask: (taskId: string) => Activity[]
-  
+
   // Comment actions
   addComment: (comment: Omit<TaskComment, "id" | "createdAt" | "updatedAt">) => Promise<void>
   updateComment: (id: string, content: string) => Promise<void>
   deleteComment: (id: string) => Promise<void>
   getCommentsForTask: (taskId: string) => TaskComment[]
-  
+
   // Attachment actions
   addAttachment: (attachment: Omit<TaskAttachment, "id" | "uploadedAt">) => Promise<void>
   deleteAttachment: (id: string) => Promise<void>
   getAttachmentsForTask: (taskId: string) => TaskAttachment[]
-  
+
   // History actions
   addHistory: (history: Omit<TaskHistory, "id" | "changedAt">) => void
   getHistoryForTask: (taskId: string) => TaskHistory[]
   trackFieldChange: (taskId: string, field: string, oldValue: unknown, newValue: unknown) => void
   getFormattedHistory: (taskId: string) => HistoryEntry[]
-  
+
   // Task dependencies
   addBlocker: (taskId: string, blockedByTaskId: string) => Promise<void>
   removeBlocker: (taskId: string, blockedByTaskId: string) => Promise<void>
   getBlockedTasks: () => Task[]
-  
+
   // Seed/Clear data actions
-  seedSampleData: (data: { 
-    projects: Project[]; 
-    tasks: Omit<Task, 'completedAt' | 'blockedBy' | 'blocking'>[]; 
-    timeEntries: Omit<TimeEntry, 'type'>[] 
+  seedSampleData: (data: {
+    projects: Project[];
+    tasks: Omit<Task, 'completedAt' | 'blockedBy' | 'blocking'>[];
+    timeEntries: Omit<TimeEntry, 'type'>[]
   }) => void
   clearAllData: () => void
-  
+
   // Loading and error state
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
@@ -163,6 +167,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       attachments: [],
       history: [],
       boards: [],
+
       selectedProjectId: null,
       boardFilters: DEFAULT_BOARD_FILTERS,
       isLoading: false,
@@ -180,6 +185,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             apiClient.get<TaskAttachment[]>('/api/attachments'),
             apiClient.get<Activity[]>('/api/activities'),
             apiClient.get<Board[]>('/api/boards'),
+
             // NOTE: history is NOT loaded from API - it's generated from activity logs
             // If history should be persisted separately, implement /api/history endpoint
           ])
@@ -214,6 +220,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             newState.boards = boardsResult.value
           }
 
+
           // Set error if ANY endpoint failed
           const failedResults = results.filter(r => r.status === 'rejected')
           if (failedResults.length > 0) {
@@ -227,6 +234,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
                   '/api/attachments',
                   '/api/activities',
                   '/api/boards',
+
                 ]
                 const endpoint = endpoints[results.indexOf(r)]
                 return `${endpoint} failed`
@@ -248,19 +256,19 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           console.error('Project name is required')
           return
         }
-        
+
         set({ isLoading: true, error: null })
-        
+
         try {
           const response = await apiClient.post<Project>('/api/projects', {
             name: name.trim(),
             color,
             jiraKey: jiraKey || null,
           })
-          
-          set((state) => ({ 
+
+          set((state) => ({
             projects: [...state.projects, response],
-            isLoading: false 
+            isLoading: false
           }))
         } catch (error) {
           const message = error instanceof APIError ? error.message : 'Failed to create project'
@@ -271,10 +279,10 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       updateProject: async (id, updates) => {
         set({ isLoading: true, error: null })
-        
+
         try {
           const response = await apiClient.patch<Project>(`/api/projects/${id}`, updates)
-          
+
           set((state) => ({
             projects: state.projects.map((p) => (p.id === id ? response : p)),
             isLoading: false
@@ -288,10 +296,10 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       deleteProject: async (id) => {
         set({ isLoading: true, error: null })
-        
+
         try {
           await apiClient.delete<void>(`/api/projects/${id}`)
-          
+
           set((state) => ({
             projects: state.projects.filter((p) => p.id !== id),
             tasks: state.tasks.filter((t) => t.projectId !== id),
@@ -312,13 +320,13 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       addSubcategoryToProject: async (projectId, name) => {
         set({ isLoading: true, error: null })
-        
+
         try {
           const response = await apiClient.post<Project>(
             `/api/projects/${projectId}/subcategories`,
             { name }
           )
-          
+
           set((state) => ({
             projects: state.projects.map((p) => (p.id === projectId ? response : p)),
             isLoading: false
@@ -333,15 +341,15 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       // Whiteboard/Canvas Board Actions (Phase 2)
       addBoard: async (boardData) => {
         set({ isLoading: true, error: null })
-        
+
         try {
           const response = await apiClient.post<Board>('/api/boards', boardData)
-          
+
           set((state) => ({
             boards: [...state.boards, response],
             isLoading: false
           }))
-          
+
           return response
         } catch (error) {
           const message = error instanceof APIError ? error.message : 'Failed to create board'
@@ -353,10 +361,10 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       updateBoard: async (id, updates) => {
         set({ isLoading: true, error: null })
-        
+
         try {
           const response = await apiClient.patch<Board>(`/api/boards/${id}`, updates)
-          
+
           set((state) => ({
             boards: state.boards.map((b) => (b.id === id ? response : b)),
             isLoading: false
@@ -370,10 +378,10 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       deleteBoard: async (id) => {
         set({ isLoading: true, error: null })
-        
+
         try {
           await apiClient.delete<void>(`/api/boards/${id}`)
-          
+
           set((state) => ({
             boards: state.boards.filter((b) => b.id !== id),
             isLoading: false
@@ -387,10 +395,10 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       archiveBoard: async (id) => {
         set({ isLoading: true, error: null })
-        
+
         try {
           const response = await apiClient.patch<Board>(`/api/boards/${id}`, { isArchived: true })
-          
+
           set((state) => ({
             boards: state.boards.map((b) => (b.id === id ? response : b)),
             isLoading: false
@@ -406,6 +414,8 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         return get().boards.filter((b) => b.projectId === projectId && !b.isArchived)
       },
 
+
+
       addTask: async (task) => {
         if (!task.title?.trim()) {
           console.error('Task title is required')
@@ -415,21 +425,21 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           console.error('Task projectId is required')
           return undefined
         }
-        
+
         set({ isLoading: true, error: null })
-        
+
         try {
           const response = await apiClient.post<Task>('/api/tasks', {
             ...task,
             title: task.title.trim(),
             description: task.description?.trim() || '',
           })
-          
-          set((state) => ({ 
+
+          set((state) => ({
             tasks: [...state.tasks, response],
-            isLoading: false 
+            isLoading: false
           }))
-          
+
           return response
         } catch (error) {
           const message = error instanceof APIError ? error.message : 'Failed to create task'
@@ -442,9 +452,9 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       updateTask: async (id, updates) => {
         try {
           set({ isLoading: true, error: null })
-          
+
           const updatedTask = await apiClient.patch<Task>(`/api/tasks/${id}`, updates)
-          
+
           set((state) => ({
             tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
             isLoading: false,
@@ -459,9 +469,9 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       deleteTask: async (id) => {
         try {
           set({ isLoading: true, error: null })
-          
+
           await apiClient.delete(`/api/tasks/${id}`)
-          
+
           set((state) => ({
             tasks: state.tasks.filter((t) => t.id !== id),
             timeEntries: state.timeEntries.filter((te) => te.taskId !== id),
@@ -477,14 +487,14 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       moveTask: async (id, status) => {
         try {
           set({ isLoading: true, error: null })
-          
+
           const updates: Partial<Task> = { status }
           if (status === 'done') {
             updates.completedAt = new Date()
           }
-          
+
           const updatedTask = await apiClient.patch<Task>(`/api/tasks/${id}`, updates)
-          
+
           set((state) => ({
             tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
             isLoading: false,
@@ -500,12 +510,12 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       archiveTask: async (id) => {
         try {
           set({ isLoading: true, error: null })
-          
+
           const updatedTask = await apiClient.patch<Task>(`/api/tasks/${id}`, {
             isArchived: true,
             archivedAt: new Date(),
           })
-          
+
           set((state) => ({
             tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
             isLoading: false,
@@ -520,12 +530,12 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       unarchiveTask: async (id) => {
         try {
           set({ isLoading: true, error: null })
-          
+
           const updatedTask = await apiClient.patch<Task>(`/api/tasks/${id}`, {
             isArchived: false,
             archivedAt: null,
           })
-          
+
           set((state) => ({
             tasks: state.tasks.map((t) => (t.id === id ? updatedTask : t)),
             isLoading: false,
@@ -540,12 +550,12 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       bulkArchiveTasks: async (ids) => {
         try {
           set({ isLoading: true, error: null })
-          
+
           await apiClient.post('/api/tasks/bulk', {
             operation: 'archive',
             taskIds: ids,
           })
-          
+
           // Refresh all tasks from database after bulk operation
           const tasks = await apiClient.get<Task[]>('/api/tasks')
           set({ tasks, isLoading: false })
@@ -559,12 +569,12 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       bulkDeleteTasks: async (ids) => {
         try {
           set({ isLoading: true, error: null })
-          
+
           await apiClient.post('/api/tasks/bulk', {
             operation: 'delete',
             taskIds: ids,
           })
-          
+
           // Refresh all tasks from database after bulk operation
           const tasks = await apiClient.get<Task[]>('/api/tasks')
           set({ tasks, isLoading: false })
@@ -579,7 +589,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
         const cutoffDate = new Date()
         cutoffDate.setDate(cutoffDate.getDate() - daysOld)
         const now = new Date()
-        
+
         let archivedCount = 0
         set((state) => {
           const updatedTasks = state.tasks.map((t) => {
@@ -719,7 +729,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             const taskDate = new Date(task.createdAt)
             const now = new Date()
             const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-            
+
             if (dateRange === "custom") {
               // Use custom date range if provided
               if (customStart && customEnd) {
@@ -727,7 +737,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
                 const customEndDate = new Date(customEnd)
                 customStartDate.setHours(0, 0, 0, 0)
                 customEndDate.setHours(23, 59, 59, 999)
-                
+
                 if (taskDate < customStartDate || taskDate > customEndDate) return false
               }
             } else {
@@ -770,7 +780,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       getArchiveStats: () => {
         const archivedTasks = get().tasks.filter((t) => t.isArchived)
         const byProject: Record<string, number> = {}
-        
+
         archivedTasks.forEach((task) => {
           byProject[task.projectId] = (byProject[task.projectId] || 0) + 1
         })
@@ -783,7 +793,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       getTimeByEntryType: (startDate?: Date, endDate?: Date) => {
         const { timeEntries } = get()
-        
+
         // Filter by date range if provided
         let filteredEntries = timeEntries
         if (startDate || endDate) {
@@ -826,15 +836,15 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
         // Group by date + taskId
         const sessionMap = new Map<string, { taskId: string; date: Date; minutes: number }>()
-        
+
         devEntries.forEach((entry) => {
           const entryDate = new Date(entry.date)
           const dateKey = entryDate.toISOString().split('T')[0] // YYYY-MM-DD
           const key = `${dateKey}-${entry.taskId}`
-          
+
           const minutes = entry.hours * 60 + entry.minutes
           const existing = sessionMap.get(key)
-          
+
           if (existing) {
             existing.minutes += minutes
           } else {
@@ -860,7 +870,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       getActivitiesByDateRange: (startDate, endDate) => {
         const { activities } = get()
-        
+
         return activities.filter((activity) => {
           const activityDate = new Date(activity.createdAt)
           return activityDate >= startDate && activityDate <= endDate
@@ -869,7 +879,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       getTasksCompletedInRange: (startDate, endDate) => {
         const { tasks } = get()
-        
+
         return tasks.filter((task) => {
           if (!task.completedAt) return false
           const completedDate = new Date(task.completedAt)
@@ -879,7 +889,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
 
       getTimeBreakdownByType: (startDate, endDate) => {
         const { timeEntries } = get()
-        
+
         const breakdown: Record<TimeEntryType, number> = {
           development: 0,
           meeting: 0,
@@ -888,7 +898,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           debugging: 0,
           other: 0,
         }
-        
+
         timeEntries.forEach((entry) => {
           const entryDate = new Date(entry.date)
           if (entryDate >= startDate && entryDate <= endDate) {
@@ -896,32 +906,32 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             breakdown[entry.type] = (breakdown[entry.type] || 0) + minutes
           }
         })
-        
+
         return breakdown
       },
 
       getProductivityTrend: (startDate, endDate) => {
         const { timeEntries } = get()
         const trend: { day: string; minutes: number }[] = []
-        
+
         // Calculate number of days between start and end (inclusive)
         const start = new Date(startDate)
         start.setHours(0, 0, 0, 0)
         const end = new Date(endDate)
         end.setHours(0, 0, 0, 0)
-        
+
         const dayCount = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-        
+
         // Generate data for each day
         for (let i = 0; i < dayCount; i++) {
           const currentDay = new Date(start)
           currentDay.setDate(start.getDate() + i)
-          
+
           const dayStart = new Date(currentDay)
           dayStart.setHours(0, 0, 0, 0)
           const dayEnd = new Date(currentDay)
           dayEnd.setHours(23, 59, 59, 999)
-          
+
           // Calculate total minutes for this day
           const dayMinutes = timeEntries
             .filter((entry) => {
@@ -929,27 +939,27 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
               return entryDate >= dayStart && entryDate <= dayEnd
             })
             .reduce((sum, entry) => sum + entry.hours * 60 + entry.minutes, 0)
-          
+
           // Format day label (e.g., "Mon 13", "Tue 14")
           const dayLabel = currentDay.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
-          
+
           trend.push({
             day: dayLabel,
             minutes: dayMinutes,
           })
         }
-        
+
         return trend
       },
 
       getComparisonData: (period, referenceDate = new Date()) => {
         const { tasks, timeEntries } = get()
-        
+
         // Helper to get date ranges based on period type
         const getDateRanges = (refDate: Date) => {
           const ref = new Date(refDate)
           let currentStart: Date, currentEnd: Date, previousStart: Date, previousEnd: Date
-          
+
           if (period === "week-over-week") {
             // Current week: Sunday to Saturday (using UTC to avoid timezone issues)
             currentStart = new Date(Date.UTC(
@@ -958,14 +968,14 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
               ref.getUTCDate() - ref.getUTCDay(), // Go to Sunday
               0, 0, 0, 0
             ))
-            
+
             currentEnd = new Date(Date.UTC(
               currentStart.getUTCFullYear(),
               currentStart.getUTCMonth(),
               currentStart.getUTCDate() + 6, // Go to Saturday
               23, 59, 59, 999
             ))
-            
+
             // Previous week
             previousEnd = new Date(Date.UTC(
               currentStart.getUTCFullYear(),
@@ -983,7 +993,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             // Current month: 1st to last day (using UTC)
             currentStart = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 1, 0, 0, 0, 0))
             currentEnd = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() + 1, 0, 23, 59, 59, 999))
-            
+
             // Previous month
             previousStart = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth() - 1, 1, 0, 0, 0, 0))
             previousEnd = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), 0, 23, 59, 59, 999))
@@ -992,7 +1002,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             const currentQuarter = Math.floor(ref.getUTCMonth() / 3)
             currentStart = new Date(Date.UTC(ref.getUTCFullYear(), currentQuarter * 3, 1, 0, 0, 0, 0))
             currentEnd = new Date(Date.UTC(ref.getUTCFullYear(), (currentQuarter + 1) * 3, 0, 23, 59, 59, 999))
-            
+
             // Previous quarter
             const previousQuarter = currentQuarter - 1
             const previousYear = previousQuarter < 0 ? ref.getUTCFullYear() - 1 : ref.getUTCFullYear()
@@ -1000,31 +1010,31 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             previousStart = new Date(Date.UTC(previousYear, adjustedQuarter * 3, 1, 0, 0, 0, 0))
             previousEnd = new Date(Date.UTC(previousYear, (adjustedQuarter + 1) * 3, 0, 23, 59, 59, 999))
           }
-          
+
           return { currentStart, currentEnd, previousStart, previousEnd }
         }
-        
+
         const { currentStart, currentEnd, previousStart, previousEnd } = getDateRanges(referenceDate)
-        
+
         // Filter non-archived tasks
         const activeTasks = tasks.filter(t => !t.archivedAt)
-        
+
         // Calculate current period metrics
-        const currentCompleted = activeTasks.filter(t => 
-          t.completedAt && 
-          new Date(t.completedAt) >= currentStart && 
+        const currentCompleted = activeTasks.filter(t =>
+          t.completedAt &&
+          new Date(t.completedAt) >= currentStart &&
           new Date(t.completedAt) <= currentEnd
         )
-        const currentCreated = activeTasks.filter(t => 
-          new Date(t.createdAt) >= currentStart && 
+        const currentCreated = activeTasks.filter(t =>
+          new Date(t.createdAt) >= currentStart &&
           new Date(t.createdAt) <= currentEnd
         )
-        const currentTimeEntries = timeEntries.filter(e => 
-          new Date(e.date) >= currentStart && 
+        const currentTimeEntries = timeEntries.filter(e =>
+          new Date(e.date) >= currentStart &&
           new Date(e.date) <= currentEnd
         )
         const currentTotalTime = currentTimeEntries.reduce((sum, e) => sum + e.hours * 60 + e.minutes, 0)
-        
+
         // Calculate average completion time for current period
         let currentAvgCompletionTime = 0
         if (currentCompleted.length > 0) {
@@ -1036,23 +1046,23 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           }, 0)
           currentAvgCompletionTime = Math.round(totalDays / currentCompleted.length)
         }
-        
+
         // Calculate previous period metrics
-        const previousCompleted = activeTasks.filter(t => 
-          t.completedAt && 
-          new Date(t.completedAt) >= previousStart && 
+        const previousCompleted = activeTasks.filter(t =>
+          t.completedAt &&
+          new Date(t.completedAt) >= previousStart &&
           new Date(t.completedAt) <= previousEnd
         )
-        const previousCreated = activeTasks.filter(t => 
-          new Date(t.createdAt) >= previousStart && 
+        const previousCreated = activeTasks.filter(t =>
+          new Date(t.createdAt) >= previousStart &&
           new Date(t.createdAt) <= previousEnd
         )
-        const previousTimeEntries = timeEntries.filter(e => 
-          new Date(e.date) >= previousStart && 
+        const previousTimeEntries = timeEntries.filter(e =>
+          new Date(e.date) >= previousStart &&
           new Date(e.date) <= previousEnd
         )
         const previousTotalTime = previousTimeEntries.reduce((sum, e) => sum + e.hours * 60 + e.minutes, 0)
-        
+
         // Calculate average completion time for previous period
         let previousAvgCompletionTime = 0
         if (previousCompleted.length > 0) {
@@ -1064,18 +1074,18 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           }, 0)
           previousAvgCompletionTime = Math.round(totalDays / previousCompleted.length)
         }
-        
+
         // Calculate deltas and percentages
         const calculateDelta = (current: number, previous: number) => ({
           absolute: current - previous,
           percent: previous === 0 ? 0 : Math.round(((current - previous) / previous) * 100)
         })
-        
+
         const completedDelta = calculateDelta(currentCompleted.length, previousCompleted.length)
         const createdDelta = calculateDelta(currentCreated.length, previousCreated.length)
         const timeDelta = calculateDelta(currentTotalTime, previousTotalTime)
         const avgCompletionDelta = calculateDelta(currentAvgCompletionTime, previousAvgCompletionTime)
-        
+
         return {
           current: {
             tasksCompleted: currentCompleted.length,
@@ -1105,24 +1115,24 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       getVelocityData: (weeksBack) => {
         const { tasks } = get()
         const velocityData: VelocityWeekData[] = []
-        
+
         // Generate data for the requested number of weeks
         for (let weekOffset = 0; weekOffset < weeksBack; weekOffset++) {
           const weekEnd = new Date()
           weekEnd.setDate(weekEnd.getDate() - (weekOffset * 7))
           weekEnd.setHours(23, 59, 59, 999)
-          
+
           const weekStart = new Date(weekEnd)
           weekStart.setDate(weekStart.getDate() - 6)
           weekStart.setHours(0, 0, 0, 0)
-          
+
           // Get tasks completed in this week
           const completedInWeek = tasks.filter((task) => {
             if (!task.completedAt) return false
             const completedDate = new Date(task.completedAt)
             return completedDate >= weekStart && completedDate <= weekEnd
           })
-          
+
           // Calculate average cycle time for this week
           let avgCycleTime = 0
           if (completedInWeek.length > 0) {
@@ -1134,10 +1144,10 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             }, 0)
             avgCycleTime = totalCycleDays / completedInWeek.length
           }
-          
+
           // Format week label (e.g., "Jan 1-7")
           const weekLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}-${weekEnd.getDate()}`
-          
+
           velocityData.unshift({
             week: weekLabel,
             weekStart,
@@ -1146,23 +1156,23 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             avgCycleTime,
           })
         }
-        
+
         return velocityData
       },
 
       getAverageCycleTime: (projectId?) => {
         const { tasks } = get()
-        
+
         // Filter completed tasks
         let completedTasks = tasks.filter((task) => task.completedAt !== null)
-        
+
         // Further filter by project if provided
         if (projectId) {
           completedTasks = completedTasks.filter((task) => task.projectId === projectId)
         }
-        
+
         if (completedTasks.length === 0) return 0
-        
+
         // Calculate average cycle time in days
         const totalCycleDays = completedTasks.reduce((sum, task) => {
           const created = new Date(task.createdAt)
@@ -1170,16 +1180,16 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           const cycleDays = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
           return sum + cycleDays
         }, 0)
-        
+
         return totalCycleDays / completedTasks.length
       },
 
       getTaskEfficiencyMetrics: () => {
         const { tasks, timeEntries, projects } = get()
-        
+
         // Filter completed tasks only
         const completedTasks = tasks.filter((task) => task.completedAt !== null)
-        
+
         if (completedTasks.length === 0) {
           return {
             byPriority: [],
@@ -1188,71 +1198,71 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             overallAvgTimeSpent: 0,
           }
         }
-        
+
         // Calculate metrics by priority
         const priorityGroups = new Map<string, { tasks: Task[]; totalCycleTime: number; totalTimeSpent: number }>()
-        
+
         completedTasks.forEach((task) => {
           const priority = task.priority
           if (!priorityGroups.has(priority)) {
             priorityGroups.set(priority, { tasks: [], totalCycleTime: 0, totalTimeSpent: 0 })
           }
-          
+
           const group = priorityGroups.get(priority)!
           group.tasks.push(task)
-          
+
           // Calculate cycle time
           const created = new Date(task.createdAt)
           const completed = new Date(task.completedAt!)
           const cycleDays = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
           group.totalCycleTime += cycleDays
-          
+
           // Calculate time spent
           const taskTimeEntries = timeEntries.filter((entry) => entry.taskId === task.id)
           const timeSpentMinutes = taskTimeEntries.reduce((sum, entry) => sum + entry.hours * 60 + entry.minutes, 0)
           group.totalTimeSpent += timeSpentMinutes
         })
-        
+
         const byPriority = Array.from(priorityGroups.entries()).map(([priority, group]) => ({
           category: priority,
           avgCycleTimeDays: group.totalCycleTime / group.tasks.length,
           avgTimeSpentMinutes: group.totalTimeSpent / group.tasks.length,
           taskCount: group.tasks.length,
         }))
-        
+
         // Calculate metrics by project
         const projectGroups = new Map<string, { tasks: Task[]; totalCycleTime: number; totalTimeSpent: number }>()
-        
+
         completedTasks.forEach((task) => {
           const project = projects.find((p) => p.id === task.projectId)
           const projectName = project?.name || 'Unknown'
-          
+
           if (!projectGroups.has(projectName)) {
             projectGroups.set(projectName, { tasks: [], totalCycleTime: 0, totalTimeSpent: 0 })
           }
-          
+
           const group = projectGroups.get(projectName)!
           group.tasks.push(task)
-          
+
           // Calculate cycle time
           const created = new Date(task.createdAt)
           const completed = new Date(task.completedAt!)
           const cycleDays = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
           group.totalCycleTime += cycleDays
-          
+
           // Calculate time spent
           const taskTimeEntries = timeEntries.filter((entry) => entry.taskId === task.id)
           const timeSpentMinutes = taskTimeEntries.reduce((sum, entry) => sum + entry.hours * 60 + entry.minutes, 0)
           group.totalTimeSpent += timeSpentMinutes
         })
-        
+
         const byProject = Array.from(projectGroups.entries()).map(([projectName, group]) => ({
           category: projectName,
           avgCycleTimeDays: group.totalCycleTime / group.tasks.length,
           avgTimeSpentMinutes: group.totalTimeSpent / group.tasks.length,
           taskCount: group.tasks.length,
         }))
-        
+
         // Calculate overall averages
         const totalCycleDays = completedTasks.reduce((sum, task) => {
           const created = new Date(task.createdAt)
@@ -1260,12 +1270,12 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           const cycleDays = (completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
           return sum + cycleDays
         }, 0)
-        
+
         const totalTimeSpentMinutes = completedTasks.reduce((sum, task) => {
           const taskTimeEntries = timeEntries.filter((entry) => entry.taskId === task.id)
           return sum + taskTimeEntries.reduce((entrySum, entry) => entrySum + entry.hours * 60 + entry.minutes, 0)
         }, 0)
-        
+
         return {
           byPriority,
           byProject,
@@ -1285,7 +1295,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       },
 
       getActivitiesForTask: (taskId) => {
-        return get().activities.filter((a) => a.taskId === taskId).sort((a, b) => 
+        return get().activities.filter((a) => a.taskId === taskId).sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )
       },
@@ -1347,7 +1357,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       },
 
       getCommentsForTask: (taskId) => {
-        return get().comments.filter((c) => c.taskId === taskId).sort((a, b) => 
+        return get().comments.filter((c) => c.taskId === taskId).sort((a, b) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         )
       },
@@ -1393,7 +1403,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       },
 
       getAttachmentsForTask: (taskId) => {
-        return get().attachments.filter((a) => a.taskId === taskId).sort((a, b) => 
+        return get().attachments.filter((a) => a.taskId === taskId).sort((a, b) =>
           new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
         )
       },
@@ -1409,7 +1419,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       },
 
       getHistoryForTask: (taskId) => {
-        return get().history.filter((h) => h.taskId === taskId).sort((a, b) => 
+        return get().history.filter((h) => h.taskId === taskId).sort((a, b) =>
           new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime()
         )
       },
@@ -1417,12 +1427,12 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       trackFieldChange: (taskId, field, oldValue, newValue) => {
         // Only track if values are different
         if (oldValue === newValue) return
-        
+
         const oldValueStr = oldValue === null || oldValue === undefined ? '' : String(oldValue)
         const newValueStr = newValue === null || newValue === undefined ? '' : String(newValue)
-        
+
         if (oldValueStr === newValueStr) return
-        
+
         get().addHistory({
           taskId,
           field,
@@ -1434,7 +1444,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       getFormattedHistory: (taskId) => {
         const history = get().getHistoryForTask(taskId)
         const { tasks, projects } = get()
-        
+
         const formatFieldLabel = (field: string): string => {
           const labels: Record<string, string> = {
             title: 'Title',
@@ -1449,7 +1459,7 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           }
           return labels[field] || field.charAt(0).toUpperCase() + field.slice(1)
         }
-        
+
         const formatStatusValue = (value: string): string => {
           const statusLabels: Record<string, string> = {
             backlog: 'Backlog',
@@ -1459,19 +1469,19 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           }
           return statusLabels[value] || value
         }
-        
+
         const formatPriorityValue = (value: string): string => {
           return value.charAt(0).toUpperCase() + value.slice(1)
         }
-        
+
         const formatProjectValue = (projectId: string): string => {
           const project = projects.find(p => p.id === projectId)
           return project?.name || projectId
         }
-        
+
         const formatValue = (field: string, value: string): string => {
           if (!value) return '(empty)'
-          
+
           switch (field) {
             case 'status':
               return formatStatusValue(value)
@@ -1485,13 +1495,13 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
               return value || '(empty)'
           }
         }
-        
+
         return history.map((h): HistoryEntry => {
           let changeType: HistoryEntry['changeType'] = 'updated'
           if (h.field === 'status') {
             changeType = 'status_changed'
           }
-          
+
           return {
             id: h.id,
             taskId: h.taskId,
@@ -1511,33 +1521,33 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       addBlocker: async (taskId, blockedByTaskId) => {
         try {
           set({ isLoading: true, error: null })
-          
+
           // Get current task to update its blockedBy array
           const task = get().tasks.find(t => t.id === taskId)
           if (!task) {
             set({ error: 'Task not found', isLoading: false })
             return
           }
-          
+
           // Get blocker task to update its blocking array
           const blockerTask = get().tasks.find(t => t.id === blockedByTaskId)
           if (!blockerTask) {
             set({ error: 'Blocker task not found', isLoading: false })
             return
           }
-          
+
           // Update task being blocked
           const updatedBlockedBy = task.blockedBy ? [...task.blockedBy, blockedByTaskId] : [blockedByTaskId]
           const updatedTask = await apiClient.patch<Task>(`/api/tasks/${taskId}`, {
             blockedBy: updatedBlockedBy,
           })
-          
+
           // Update blocking task
           const updatedBlocking = blockerTask.blocking ? [...blockerTask.blocking, taskId] : [taskId]
           const updatedBlockerTask = await apiClient.patch<Task>(`/api/tasks/${blockedByTaskId}`, {
             blocking: updatedBlocking,
           })
-          
+
           set((state) => ({
             tasks: state.tasks.map((t) => {
               if (t.id === taskId) return updatedTask
@@ -1556,33 +1566,33 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
       removeBlocker: async (taskId, blockedByTaskId) => {
         try {
           set({ isLoading: true, error: null })
-          
+
           // Get current task to update its blockedBy array
           const task = get().tasks.find(t => t.id === taskId)
           if (!task) {
             set({ error: 'Task not found', isLoading: false })
             return
           }
-          
+
           // Get blocker task to update its blocking array
           const blockerTask = get().tasks.find(t => t.id === blockedByTaskId)
           if (!blockerTask) {
             set({ error: 'Blocker task not found', isLoading: false })
             return
           }
-          
+
           // Update task being unblocked
           const updatedBlockedBy = task.blockedBy ? task.blockedBy.filter(id => id !== blockedByTaskId) : []
           const updatedTask = await apiClient.patch<Task>(`/api/tasks/${taskId}`, {
             blockedBy: updatedBlockedBy,
           })
-          
+
           // Update blocking task
           const updatedBlocking = blockerTask.blocking ? blockerTask.blocking.filter(id => id !== taskId) : []
           const updatedBlockerTask = await apiClient.patch<Task>(`/api/tasks/${blockedByTaskId}`, {
             blocking: updatedBlocking,
           })
-          
+
           set((state) => ({
             tasks: state.tasks.map((t) => {
               if (t.id === taskId) return updatedTask
@@ -1662,12 +1672,12 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
             boardFilters: DEFAULT_BOARD_FILTERS,
           }
         }
-        
+
         // Ensure boardFilters has all required fields
         if (persistedState && !persistedState.boardFilters) {
           persistedState.boardFilters = DEFAULT_BOARD_FILTERS
         }
-        
+
         return persistedState
       },
       // Handle localStorage quota errors

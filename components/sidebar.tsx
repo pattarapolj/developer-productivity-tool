@@ -18,6 +18,7 @@ import {
   ChevronRight,
   FolderOpen,
   PenTool,
+  BookOpen,
 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/projects", icon: FolderOpen, label: "Projects" },
   { href: "/calendar", icon: Calendar, label: "Calendar" },
   { href: "/whiteboards", icon: PenTool, label: "Whiteboards" },
+
   { href: "/analytics", icon: BarChart3, label: "Analytics" },
 ]
 

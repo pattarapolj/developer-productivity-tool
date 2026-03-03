@@ -26,8 +26,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import type { Board } from "@/lib/types"
+import { EditBoardDialog } from "@/components/edit-board-dialog"
+import { type Board } from "@/lib/types"
 import { formatDistanceToNow } from "date-fns"
+import { Edit } from "lucide-react"
 
 interface BoardCardProps {
   board: Board
@@ -38,6 +40,7 @@ export function BoardCard({ board, className }: BoardCardProps) {
   const router = useRouter()
   const { projects, archiveBoard, deleteBoard, addBoard } = useToolingTrackerStore()
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
 
   const project = projects.find((p) => p.id === board.projectId)
 
@@ -130,6 +133,16 @@ export function BoardCard({ board, className }: BoardCardProps) {
                 <Copy className="w-4 h-4 mr-2" />
                 Duplicate
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setEditOpen(true)
+                }}
+                className="cursor-pointer"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={(e) => {
@@ -211,6 +224,9 @@ export function BoardCard({ board, className }: BoardCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Board Dialog */}
+      <EditBoardDialog open={editOpen} onOpenChange={setEditOpen} board={board} />
     </>
   )
 }
