@@ -93,14 +93,11 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
                 return
             }
 
-            // Get the selection coordinates
+            // Get the selection coordinates (reserved for potential future use)
             const { ranges } = selection
-            const from = Math.min(...ranges.map(range => range.$from.pos))
-            const to = Math.max(...ranges.map(range => range.$to.pos))
             
             // Use the editor's DOM to find the selection position
             const editorElement = editor.view.dom
-            const editorRect = editorElement.getBoundingClientRect()
             
             const domSelection = window.getSelection()
             if (!domSelection || domSelection.rangeCount === 0) {
