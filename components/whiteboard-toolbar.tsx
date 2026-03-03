@@ -1,3 +1,5 @@
+"use client"
+
 import { Download, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
