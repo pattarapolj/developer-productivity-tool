@@ -47,11 +47,15 @@ export function WhiteboardEditor({
 }: WhiteboardEditorProps) {
   const [mounted, setMounted] = useState(false)
   const excalidrawAPIRef = useRef<any>(null)
+  const lastContentRef = useRef<string | null>(null)
 
   // Derive initial state from initialContent without setState
   const initialState = useMemo(() => {
     try {
-      return deserializeExcalidrawState(initialContent)
+      const state = deserializeExcalidrawState(initialContent)
+      // Initialize last content reference
+      lastContentRef.current = initialContent
+      return state
     } catch (error) {
       console.error('Failed to parse initial content:', error)
       return { elements: [], appState: {} }
@@ -88,7 +92,13 @@ export function WhiteboardEditor({
         try {
           // Cast to any for serialization compatibility with Excalidraw types
           const serialized = serializeExcalidrawState(elements as any[], appState as any)
-          onChange(serialized)
+          
+          // Only call onChange if content has actually changed
+          // This prevents unnecessary saves from viewport-only updates
+          if (serialized !== lastContentRef.current) {
+            lastContentRef.current = serialized
+            onChange(serialized)
+          }
         } catch (error) {
           console.error('Failed to serialize Excalidraw state:', error)
         }

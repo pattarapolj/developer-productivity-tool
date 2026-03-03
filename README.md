@@ -167,13 +167,36 @@ This is my personal project to build a comprehensive productivity tracking tool 
 
 ## 🚀 Getting Started
 
+### Quick Start (TL;DR)
+
+```bash
+# Clone and navigate
+git clone <repository-url>
+cd developer-productivity-tool
+
+# One command to install, setup database, and start server
+pnpm start:dev
+
+# Open http://localhost:3000
+```
+
+**That's it!** The `start:dev` command automatically:
+- ✅ Installs all dependencies
+- ✅ Generates Prisma client
+- ✅ Creates/syncs SQLite database
+- ✅ Starts development server
+
+---
+
 ### Prerequisites
 
 - **Node.js** 18+ (recommended: 20+)
 - **pnpm** 8+ (install via `npm install -g pnpm`)
 - **Git** for version control
 
-### Installation
+### Detailed Installation Steps
+
+If you prefer step-by-step setup:
 
 1. **Clone the repository**
    ```bash
@@ -186,12 +209,18 @@ This is my personal project to build a comprehensive productivity tracking tool 
    pnpm install
    ```
 
-3. **Run the development server**
+3. **Setup database**
+   ```bash
+   pnpm setup
+   ```
+   This generates Prisma client and creates the SQLite database.
+
+4. **Run the development server**
    ```bash
    pnpm dev
    ```
 
-4. **Open in browser**
+5. **Open in browser**
    ```
    http://localhost:3000
    ```
@@ -225,9 +254,11 @@ This application uses **SQLite** for persistent data storage. All your projects,
 
 #### Database Commands
 
+- **`pnpm setup`** - Complete setup: install deps, generate Prisma client, sync database
+- **`pnpm start:dev`** - One command: setup + start dev server (recommended for first run)
+- **`pnpm db:generate`** - Generate Prisma client only
 - **`pnpm db:push`** - Sync Prisma schema to SQLite database (creates `prisma/dev.db` if not exists)
 - **`pnpm db:studio`** - Open Prisma Studio GUI to view and manage data
-- **`pnpm db:reset`** - ⚠️ Reset database completely (warning: deletes all data)
 
 #### Database Location & Backup
 
