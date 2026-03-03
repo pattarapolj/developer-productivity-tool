@@ -707,9 +707,8 @@ export const useToolingTrackerStore = create<ToolingTrackerState>()(
           if (!showArchived && taskIsArchived) return false
           if (showArchived && !taskIsArchived) return false
 
-          // Project filter (from sidebar or board filter)
-          // When viewing archive, ignore sidebar project selection to show all archived tasks
-          const effectiveProjectId = showArchived ? projectId : (projectId || selectedProjectId)
+          // Project filter (dropdown explicitly sets this)
+          const effectiveProjectId = projectId
           if (effectiveProjectId && task.projectId !== effectiveProjectId) return false
 
           // Search filter
