@@ -229,7 +229,7 @@ export const DragHandle = Extension.create({
                             return false
                         },
                         dragover(view, event) {
-                            if (!activePos) return false
+                            if (activePos === null) return false
                             
                             const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
                             if (!pos) return false
