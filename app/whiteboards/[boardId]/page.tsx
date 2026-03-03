@@ -22,6 +22,8 @@ export default function WhiteboardEdit({
   const [isPresenting, setIsPresenting] = useState(false)
   const { toast } = useToast()
 
+  const lastSavedContentRef = useRef<string | null>(null)
+
   // Derive board from store using useMemo
   const board = useMemo(() => {
     if (!mounted) return null
@@ -173,6 +175,7 @@ export default function WhiteboardEdit({
                 try {
                   const formData = new FormData()
                   formData.append('file', blob, 'thumbnail.png')
+                  formData.append('fileName', `${boardId}-thumbnail.png`)
                   
                   const res = await fetch('/api/upload', {
                     method: 'POST',

@@ -18,6 +18,7 @@ interface ExcalidrawAppState {
 interface ExcalidrawState {
   elements?: ExcalidrawElement[]
   appState?: ExcalidrawAppState
+  files?: Record<string, any>
   [key: string]: any
 }
 
@@ -29,11 +30,13 @@ interface ExcalidrawState {
  */
 export function serializeExcalidrawState(
   elements: ExcalidrawElement[],
-  appState: ExcalidrawAppState
+  appState: ExcalidrawAppState,
+  files?: Record<string, any>
 ): string {
   const state: ExcalidrawState = {
     elements,
     appState,
+    files,
   }
   return JSON.stringify(state)
 }
@@ -46,16 +49,16 @@ export function serializeExcalidrawState(
 export function deserializeExcalidrawState(jsonString: string): ExcalidrawState {
   try {
     const state = JSON.parse(jsonString)
-    
+
     // Clean up appState to remove properties that might cause issues
     // Excalidraw expects certain properties to be arrays or specific types
     const cleanAppState = state.appState || {}
-    
+
     // Ensure collaborators is an array if it exists
     if (cleanAppState.collaborators && !Array.isArray(cleanAppState.collaborators)) {
       delete cleanAppState.collaborators
     }
-    
+
     // Remove any other potentially problematic properties
     // Keep only the essential appState properties we care about
     const safeAppState = {
@@ -65,10 +68,11 @@ export function deserializeExcalidrawState(jsonString: string): ExcalidrawState 
       viewBackgroundColor: cleanAppState.viewBackgroundColor,
       // Don't include collaborators or other multi-user properties
     }
-    
+
     return {
       elements: state.elements || [],
       appState: safeAppState,
+      files: state.files || {},
     }
   } catch (error) {
     console.error('Failed to deserialize Excalidraw state:', error)
@@ -79,7 +83,8 @@ export function deserializeExcalidrawState(jsonString: string): ExcalidrawState 
         zoom: { value: 1 },
         scrollX: 0,
         scrollY: 0,
-      }
+      },
+      files: {}
     }
   }
 }
@@ -98,7 +103,7 @@ export async function generateThumbnail(
   // 1. Render the Excalidraw canvas to a canvas element
   // 2. Convert to base64 PNG
   // 3. Return the data URL
-  
+
   if (!elements || elements.length === 0) {
     return null
   }
@@ -118,6 +123,7 @@ export function initializeEmptyBoard(): string {
       scrollX: 0,
       scrollY: 0,
     },
+    files: {},
   }
   return JSON.stringify(emptyState)
 }

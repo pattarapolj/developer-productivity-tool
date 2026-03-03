@@ -86,12 +86,12 @@ export function WhiteboardEditor({
 
   // Handler for Excalidraw changes - serializes and calls onChange prop
   const handleExcalidrawChange = useCallback(
-    (elements: readonly unknown[], appState: unknown) => {
+    (elements: readonly unknown[], appState: unknown, files: unknown) => {
       // 1. Save content
       if (onChange) {
         try {
           // Cast to any for serialization compatibility with Excalidraw types
-          const serialized = serializeExcalidrawState(elements as any[], appState as any)
+          const serialized = serializeExcalidrawState(elements as any[], appState as any, files as any)
           
           // Only call onChange if content has actually changed
           // This prevents unnecessary saves from viewport-only updates
@@ -222,6 +222,7 @@ export function WhiteboardEditor({
           initialData={{
             elements: (initialState.elements || []) as readonly any[],
             appState: (initialState.appState || {}) as any,
+            files: (initialState.files || {}) as any,
           }}
           onChange={handleExcalidrawChange}
           theme="dark"

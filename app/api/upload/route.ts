@@ -21,9 +21,12 @@ export async function POST(request: NextRequest) {
       await mkdir(uploadDir, { recursive: true })
     }
 
-    // Generate unique filename
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
-    const filename = `${uniqueSuffix}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`
+    // Generate filename
+    const providedFileName = data.get('fileName') as string | null
+    const safeFileName = providedFileName ? providedFileName : `${Date.now()}-${Math.round(Math.random() * 1e9)}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`
+
+    // Safety check - prevent path traversal
+    const filename = safeFileName.replace(/(\.\.(\/|\\))/g, '')
     const filepath = join(uploadDir, filename)
 
     // Write file
