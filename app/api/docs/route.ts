@@ -10,9 +10,11 @@ export async function GET(request: Request) {
     const where: any = { isArchived: false }
     if (projectId) where.projectId = projectId
     // If parentId is explicitly null (string 'null'), fetch root docs
-    // If parentId is missing, fetch all docs? Or root docs?
-    // "Garden View" might want hierarchical or flat.
+    // If parentId is missing, don't filter by parentId.
     // Let's just filter if provided.
+    if (parentId !== null) {
+      where.parentId = parentId === "null" ? null : parentId
+    }
     
     const docs = await prisma.doc.findMany({
       where,
