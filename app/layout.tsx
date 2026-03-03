@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Sidebar } from "@/components/sidebar"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { StoreHydration } from "@/components/store-hydration"
+import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
 // <CHANGE> Updated metadata for ToolingTracker
@@ -28,6 +29,7 @@ export default function RootLayout({
             </div>
           </StoreHydration>
         </ErrorBoundary>
+        <Toaster />
         <Analytics />
       </body>
     </html>

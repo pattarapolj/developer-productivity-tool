@@ -8,6 +8,7 @@ import { WhiteboardEditor } from '@/components/whiteboard-editor'
 import { PresentationMode } from '@/components/presentation-mode'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
 
 export default function WhiteboardEdit({
   params,
@@ -19,7 +20,7 @@ export default function WhiteboardEdit({
   const store = useToolingTrackerStore()
   const [mounted, setMounted] = useState(false)
   const [isPresenting, setIsPresenting] = useState(false)
-  const lastSavedContentRef = useRef<string | null>(null)
+  const { toast } = useToast()
 
   // Derive board from store using useMemo
   const board = useMemo(() => {
@@ -168,6 +169,34 @@ export default function WhiteboardEdit({
               boardName={board.name}
               showToolbar={true}
               onPresentationModeToggle={(isPresenting) => setIsPresenting(isPresenting)}
+              onSaveThumbnail={async (blob) => {
+                try {
+                  const formData = new FormData()
+                  formData.append('file', blob, 'thumbnail.png')
+                  
+                  const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                  })
+                  
+                  if (!res.ok) throw new Error('Upload failed')
+                  
+                  const { url } = await res.json()
+                  await store.updateBoard(boardId, { thumbnailPath: url })
+                  
+                  toast({
+                    title: "Cover image updated",
+                    description: "The whiteboard thumbnail has been set successfully.",
+                  })
+                } catch (error) {
+                  console.error('Failed to save thumbnail:', error)
+                  toast({
+                    title: "Failed to set cover",
+                    description: "Could not upload the thumbnail image.",
+                    variant: "destructive",
+                  })
+                }
+              }}
             />
           </div>
         </div>

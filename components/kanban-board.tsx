@@ -160,7 +160,7 @@ export function KanbanBoard({
 
                     <TaskCard 
                       task={task} 
-                      showProject={!selectedProjectId && !boardFilters.projectId}
+                      showProject={!boardFilters.projectId}
                       showArchiveAction={!selectionMode}
                       isArchived={isViewingArchive}
                       onArchive={async () => {
